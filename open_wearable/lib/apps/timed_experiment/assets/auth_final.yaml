@@ -1,0 +1,66 @@
+global_sensor_configs:
+  - sensor: pressure
+    sample_rate: 200
+  - sensor: microphone
+    sample_rate: 48000
+  - sensor: temperature
+    sample_rate: 1
+  - sensor: ppg
+    sample_rate: 400
+  - sensor: bone_conduction
+    sample_rate: 1600
+  - sensor: imu
+    sample_rate: 800
+
+steps:
+  - name: "Quiet room - sit"
+    description: "Sit still in a quiet room for 60 seconds. Try not to move."
+    duration: 60
+
+  - name: "Quiet room - sit, stimulus"
+    description: "Sit in a quiet room and play audio stimulus for Method A for 60 seconds."
+    duration: 60
+
+  - name: "Quiet room - stand"
+    description: "Stand still in a quiet room for 60 seconds. Try not to move."
+    duration: 60
+
+  - name: "Street - stand"
+    description: "Stand still on the street for 60 seconds. Try not to move."
+    duration: 60
+
+  - name: "Street - walk"
+    description: "Walk on the street for 60 seconds at a normal pace."
+    duration: 60
+
+  - name: "Cafe - sit, still"
+    description: "Sit still in a cafe for 60 seconds. Try not to move."
+    duration: 60
+
+  - name: "Cafe - sit, reinsert earable 1/3"
+    description: "Sit still in a cafe and reinsert earable before start."
+    duration: 20
+
+  - name: "Cafe - sit, reinsert earable 2/3"
+    description: "Sit still in a cafe and reinsert earable before start."
+    duration: 20
+
+  - name: "Cafe - sit, reinsert earable 3/3"
+    description: "Sit still in a cafe and reinsert earable before start."
+    duration: 20
+
+  - name: "Cafe - sit, read out lout"
+    description: "Sit in a cafe and read out loud for 60 seconds."
+    duration: 60
+
+  - name: "Cafe - sit, type on keyboard"
+    description: "Sit in a cafe and type on keyboard for 60 seconds."
+    duration: 60
+
+  - name: "Cafe - sit, drink"
+    description: "Sit in a cafe and drink for 30 seconds."
+    duration: 30
+
+  - name: "Cafe - sit, eat"
+    description: "Sit in a cafe and eat for 60 seconds."
+    duration: 60

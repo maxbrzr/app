@@ -1,0 +1,37 @@
+# Timed Experiment Configuration
+# OpenEarable v2 sensor ID mapping
+sensor_id_map:
+  imu: "9-Axis IMU"
+  ppg: "Pulse Oximeter"
+  temperature: "Skin Temperature Sensor"
+  pressure: "Ear Canal Pressure Sensor"
+  bone_conduction: "Bone Conduction Accelerometer"
+  microphone: "Microphones"
+
+# Global sensor configurations - these apply to the entire session
+global_sensor_configs:
+  - sensor: pressure
+    sample_rate: 50
+  - sensor: temperature
+    sample_rate: 1
+  - sensor: ppg
+    sample_rate: 400
+  - sensor: bone_conduction
+    sample_rate: 1600
+  - sensor: imu
+    sample_rate: 1600
+  - sensor: microphone
+    sample_rate: 48000
+
+steps:
+  - name: "Preparation"
+    description: "Get ready for the experiment and ensure you are in a comfortable position"
+    duration: 5
+
+  - name: "Baseline Recording"
+    description: "Sit still and breathe normally to capture baseline measurements"
+    duration: 5
+
+  - name: "Activity Phase 1"
+    description: "Stand up and sit down 5 times at a normal pace"
+    duration: 5

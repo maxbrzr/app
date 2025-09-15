@@ -5,6 +5,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
+import 'package:open_wearable/apps/timed_experiment/widgets/timed_experiment_app.dart';
 import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
 
@@ -29,15 +30,17 @@ List<AppInfo> _apps = [
     logoPath: "lib/apps/posture_tracker/assets/logo.png",
     title: "Posture Tracker",
     description: "Get feedback on bad posture",
-    widget: SelectEarableView(startApp: (wearable, sensorConfigProvider) {
-      return PostureTrackerView(
-        EarableAttitudeTracker(
-          wearable as SensorManager,
-          sensorConfigProvider,
-          wearable.name.endsWith("L"),
-        ),
-      );
-    },),
+    widget: SelectEarableView(
+      startApp: (wearable, sensorConfigProvider) {
+        return PostureTrackerView(
+          EarableAttitudeTracker(
+            wearable as SensorManager,
+            sensorConfigProvider,
+            wearable.name.endsWith("L"),
+          ),
+        );
+      },
+    ),
   ),
   AppInfo(
     logoPath: "lib/apps/heart_tracker/assets/logo.png",
@@ -48,8 +51,10 @@ List<AppInfo> _apps = [
         if (wearable is SensorManager) {
           //TODO: show alert if no ppg sensor is found
           Sensor ppgSensor = (wearable as SensorManager).sensors.firstWhere(
-            (s) => s.sensorName.toLowerCase() == "photoplethysmography".toLowerCase(),
-          );
+                (s) =>
+                    s.sensorName.toLowerCase() ==
+                    "photoplethysmography".toLowerCase(),
+              );
 
           return HeartTrackerPage(ppgSensor: ppgSensor);
         }
@@ -64,6 +69,12 @@ List<AppInfo> _apps = [
       },
     ),
   ),
+  AppInfo(
+    logoPath: "lib/apps/timed_experiment/assets/logo.png",
+    title: "Timed Experiment",
+    description: "Session-based data collection with global sensor configs",
+    widget: TimedExperimentApp(),
+  ),
 ];
 
 class AppsPage extends StatelessWidget {
@@ -75,7 +86,7 @@ class AppsPage extends StatelessWidget {
       appBar: PlatformAppBar(
         title: PlatformText("Apps"),
         trailingActions: [
-            PlatformIconButton(
+          PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
             onPressed: () {
               if (Theme.of(context).platform == TargetPlatform.iOS) {
