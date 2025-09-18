@@ -57,8 +57,7 @@ class TimedExperimentManager with ChangeNotifier {
     }
   }
 
-  dynamic get currentStep =>
-      experimentConfig.steps[_currentStepIndex];
+  dynamic get currentStep => experimentConfig.steps[_currentStepIndex];
 
   int get currentStepIndex => _currentStepIndex;
 
@@ -113,17 +112,15 @@ class TimedExperimentManager with ChangeNotifier {
       var selectedConfigurations = await _configureSensors();
       _sensorsConfigured = true;
 
-      String configurations = selectedConfigurations
-          .map(
-            (entry) {
-              String name = entry.$1.name;
-              String frequency = entry.$2 is SensorFrequencyConfigurationValue 
-                  ? "${(entry.$2 as SensorFrequencyConfigurationValue).frequencyHz}Hz"
-                  : "configured";
-              return "$name: $frequency";
-            },
-          )
-          .join("; ");
+      String configurations = selectedConfigurations.map(
+        (entry) {
+          String name = entry.$1.name;
+          String frequency = entry.$2 is SensorFrequencyConfigurationValue
+              ? "${(entry.$2 as SensorFrequencyConfigurationValue).frequencyHz}Hz"
+              : "configured";
+          return "$name: $frequency";
+        },
+      ).join("; ");
 
       logger.startSession(configurations, sessionId);
       _sessionStartTime = DateTime.now();
@@ -207,7 +204,12 @@ class TimedExperimentManager with ChangeNotifier {
   }
 
   /// Configure sensors based on global configuration
-  Future<List<(SensorConfiguration<SensorConfigurationValue>, SensorConfigurationValue)>> _configureSensors() async {
+  Future<
+      List<
+          (
+            SensorConfiguration<SensorConfigurationValue>,
+            SensorConfigurationValue
+          )>> _configureSensors() async {
     if ((wearable is! SensorConfigurationManager)) {
       throw Exception("The wearable does not support sensor configuration");
     }
@@ -246,7 +248,9 @@ class TimedExperimentManager with ChangeNotifier {
 
           if (bestMatch != null) {
             sensorConfigProvider.addSensorConfiguration(
-                configuration, bestMatch,);
+              configuration,
+              bestMatch,
+            );
           }
         }
 
@@ -262,7 +266,8 @@ class TimedExperimentManager with ChangeNotifier {
       }
     }
 
-    var selectedConfigurations = sensorConfigProvider.getSelectedConfigurations();
+    var selectedConfigurations =
+        sensorConfigProvider.getSelectedConfigurations();
     for (var entry in selectedConfigurations) {
       SensorConfiguration config = entry.$1;
       SensorConfigurationValue value = entry.$2;
@@ -367,7 +372,8 @@ class SideDetectionExperimentManager extends TimedExperimentManager {
 
   @override
   dynamic get currentStep {
-    final block = (experimentConfig as ChewingSideDetectionConfig).blocks[_currentBlockIndex];
+    final block = (experimentConfig as ChewingSideDetectionConfig)
+        .blocks[_currentBlockIndex];
     return block.steps[_currentStepIndex];
   }
 
@@ -383,7 +389,8 @@ class SideDetectionExperimentManager extends TimedExperimentManager {
   }
 
   ChewingSideDetectionExperimentBlock get currentBlock {
-    return (experimentConfig as ChewingSideDetectionConfig).blocks[_currentBlockIndex];
+    return (experimentConfig as ChewingSideDetectionConfig)
+        .blocks[_currentBlockIndex];
   }
 
   bool get hasCurrentStepTimer {
@@ -400,6 +407,7 @@ class SideDetectionExperimentManager extends TimedExperimentManager {
     return index;
   }
 
+  @override
   void nextStep() {
     _elapsedSeconds = 0;
     _state = TimedExperimentState.waitingToStart;
@@ -413,7 +421,7 @@ class SideDetectionExperimentManager extends TimedExperimentManager {
     if (isLastBlockStep) {
       nextBlock();
       return;
-    } 
+    }
 
     _currentStepIndex++;
     notifyListeners();
@@ -436,14 +444,16 @@ class SideDetectionExperimentManager extends TimedExperimentManager {
     notifyListeners();
   }
 
-  @override
   /// Start the timer for the current step (called manually by user)
+  @override
   void startCurrentStepTimer() {
     if (_state != TimedExperimentState.waitingToStart) return;
 
     _state = TimedExperimentState.running;
 
     /// Log step start
+    super.logger.logStepStart(
+        currentStep["name"], currentStep["task"], currentStep["duration"]);
 
     // Start the progress timer
     _progressTimer = Timer.periodic(Duration(seconds: 1), (timer) {

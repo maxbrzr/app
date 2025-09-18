@@ -17,7 +17,7 @@ class TimedSensorConfig {
     // Parse sample_rate to handle both int and double values
     final dynamic rawSampleRate = map['sample_rate'];
     double sampleRate;
-    
+
     if (rawSampleRate is int) {
       sampleRate = rawSampleRate.toDouble();
     } else if (rawSampleRate is double) {
@@ -89,12 +89,12 @@ class TimedExperimentConfig {
         .map((step) => TimedExperimentStep.fromYaml(step as YamlMap))
         .toList();
 
-
     // Parse sensor ID mapping if it exists
     Map<String, String> sensorIdMap = {};
     if (map.containsKey('sensor_id_map')) {
       final sensorIdMapYaml = map['sensor_id_map'] as YamlMap;
-      sensorIdMap = sensorIdMapYaml.map((key, value) => MapEntry(key as String, value as String));
+      sensorIdMap = sensorIdMapYaml
+          .map((key, value) => MapEntry(key as String, value as String));
     }
 
     // Parse global sensor configurations if they exist
@@ -116,7 +116,7 @@ class TimedExperimentConfig {
   /// Loads a configuration from a file path
   static Future<TimedExperimentConfig> fromFile(String path) async {
     String yamlString;
-    
+
     // Check if the path is an asset or a file
     if (path.startsWith('lib/') || path.startsWith('assets/')) {
       yamlString = await rootBundle.loadString(path);
@@ -127,38 +127,41 @@ class TimedExperimentConfig {
       }
       yamlString = await file.readAsString();
     }
-    
+
     final config = await parseYamlString(yamlString);
     config.name = _generateNameFromConfigFile(path);
     return config;
   }
-  
+
   /// Parses a YAML string into a TimedExperimentConfig
-  static Future<TimedExperimentConfig> parseYamlString(String yamlString) async {
+  static Future<TimedExperimentConfig> parseYamlString(
+      String yamlString) async {
     try {
       final yamlMap = loadYaml(yamlString) as YamlMap;
-      
+
       // Validate required structure
       if (!yamlMap.containsKey('steps')) {
         throw Exception('Configuration is missing "steps" section');
       }
-      
+
       if ((yamlMap['steps'] is! YamlList)) {
         throw Exception('Configuration "steps" must be a list');
       }
-      
+
       if (!yamlMap.containsKey('global_sensor_configs')) {
-        throw Exception('Configuration is missing "global_sensor_configs" section');
+        throw Exception(
+            'Configuration is missing "global_sensor_configs" section');
       }
-      
+
       if ((yamlMap['global_sensor_configs'] is! YamlList)) {
         throw Exception('Configuration "global_sensor_configs" must be a list');
       }
 
-      if (yamlMap.containsKey("experiment_name") && yamlMap["experiment_name"] == "Chewing Side Detection Experiment") {
+      if (yamlMap.containsKey("experiment_name") &&
+          yamlMap["experiment_name"] == "Chewing Side Detection Experiment") {
         return ChewingSideDetectionConfig.fromYaml(yamlMap);
       }
-      
+
       return TimedExperimentConfig.fromYaml(yamlMap);
     } catch (e) {
       if (e is Exception) {
@@ -204,7 +207,8 @@ class ChewingSideDetectionConfig extends TimedExperimentConfig {
   factory ChewingSideDetectionConfig.fromYaml(YamlMap map) {
     final blockList = map['steps'] as YamlList;
     final blocks = blockList
-        .map((block) => ChewingSideDetectionExperimentBlock.fromYaml(block as YamlMap))
+        .map((block) =>
+            ChewingSideDetectionExperimentBlock.fromYaml(block as YamlMap))
         .toList();
 
     print(blocks.length);
@@ -213,7 +217,8 @@ class ChewingSideDetectionConfig extends TimedExperimentConfig {
     Map<String, String> sensorIdMap = {};
     if (map.containsKey('sensor_id_map')) {
       final sensorIdMapYaml = map['sensor_id_map'] as YamlMap;
-      sensorIdMap = sensorIdMapYaml.map((key, value) => MapEntry(key as String, value as String));
+      sensorIdMap = sensorIdMapYaml
+          .map((key, value) => MapEntry(key as String, value as String));
     }
 
     // Parse global sensor configurations if they exist
@@ -229,7 +234,7 @@ class ChewingSideDetectionConfig extends TimedExperimentConfig {
       sensorIdMap: sensorIdMap,
       globalSensorConfigs: globalSensorConfigs,
       blocks: blocks,
-    ); 
+    );
   }
 }
 
@@ -237,7 +242,7 @@ class ChewingSideDetectionExperimentBlock {
   final String instruction;
   final int number;
   final List<dynamic> steps;
-  
+
   ChewingSideDetectionExperimentBlock({
     required this.instruction,
     required this.number,
@@ -247,45 +252,85 @@ class ChewingSideDetectionExperimentBlock {
   factory ChewingSideDetectionExperimentBlock.fromYaml(YamlMap map) {
     switch (map["block_number"]) {
       case 0:
-        return ChewingSideDetectionExperimentBlock(instruction: map['instruction'] as String, number: 0, steps: []);
+        return ChewingSideDetectionExperimentBlock(
+            instruction: map['instruction'] as String, number: 0, steps: []);
       case 1:
         final tasks = [...map["tasks"], ...map["tasks"]];
-        final steps = tasks.map((task) => {"task": task["name"], "duration": task["duration"]}).toList();
+        final steps = tasks
+            .map((task) => {
+                  "name": task["name"],
+                  "task": task["name"],
+                  "duration": task["duration"]
+                })
+            .toList();
         steps.shuffle();
-        return ChewingSideDetectionExperimentBlock(instruction: map['instruction'] as String, number: 1, steps: steps);
+        return ChewingSideDetectionExperimentBlock(
+            instruction: map['instruction'] as String, number: 1, steps: steps);
       case 2:
         final foods = map["foods"];
         final steps = [];
         for (var food in foods) {
-          steps.add({"task": "Chew ${food["name"]} on the left side", "duration": food["duration"]});
-          steps.add({"task": "Chew ${food["name"]} on the right side", "duration": food["duration"]});
+          final name = food["name"];
+          steps.add({
+            "name": "$name-left",
+            "task": "Chew ${food["name"]} on the left side",
+            "duration": food["duration"],
+          });
+          steps.add({
+            "name": "$name-right",
+            "task": "Chew ${food["name"]} on the right side",
+            "duration": food["duration"],
+          });
         }
         steps.shuffle();
-        return ChewingSideDetectionExperimentBlock(instruction: map['instruction'] as String, number: 2, steps: steps);
+        return ChewingSideDetectionExperimentBlock(
+            instruction: map['instruction'] as String, number: 2, steps: steps);
       case 3:
         final foods = map["foods"];
         final sounds = map["sounds"];
         final steps = [];
         for (var food in foods) {
           for (var sound in sounds) {
-            steps.add({"task": "Chew $food on the left side while hearing ${sound["name"]}", "duration": sound["duration"]});
-            steps.add({"task": "Chew $food on the right side while hearing ${sound["name"]}", "duration": sound["duration"]});
+            final name = sound["name"];
+            steps.add({
+              "name": "$food-$name-left",
+              "task":
+                  "Chew $food on the left side while hearing ${sound["name"]}",
+              "duration": sound["duration"],
+            });
+            steps.add({
+              "name": "$food-$name-right",
+              "task":
+                  "Chew $food on the right side while hearing ${sound["name"]}",
+              "duration": sound["duration"],
+            });
           }
         }
         steps.shuffle();
-        return ChewingSideDetectionExperimentBlock(instruction: map['instruction'] as String, number: 3, steps: steps);
+        return ChewingSideDetectionExperimentBlock(
+            instruction: map['instruction'] as String, number: 3, steps: steps);
       case 4:
         final numberOfSwitches = map["number_of_switches"];
         final duration = map["duration_per_side"];
         final steps = [];
         for (var i = 0; i < numberOfSwitches; i++) {
-          steps.add({"task": "Chew the delicious bowl on the left side", "duration": duration});
-          steps.add({"task": "Chew the delicious bowl on the right side", "duration": duration});
+          steps.add({
+            "name": "bowl-left-$i",
+            "task": "Chew the delicious bowl on the left side",
+            "duration": duration,
+          });
+          steps.add({
+            "name": "bowl-right-$i",
+            "task": "Chew the delicious bowl on the right side",
+            "duration": duration,
+          });
         }
         steps.shuffle();
-        return ChewingSideDetectionExperimentBlock(instruction: map['instruction'] as String, number: 4, steps: steps);
+        return ChewingSideDetectionExperimentBlock(
+            instruction: map['instruction'] as String, number: 4, steps: steps);
       case 5:
-        return ChewingSideDetectionExperimentBlock(instruction: map['instruction'] as String, number: 5, steps: []);
+        return ChewingSideDetectionExperimentBlock(
+            instruction: map['instruction'] as String, number: 5, steps: []);
       default:
         return ChewingSideDetectionExperimentBlock(
           instruction: map['instruction'] as String,
