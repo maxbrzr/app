@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
@@ -55,7 +56,7 @@ class TimedExperimentManager with ChangeNotifier {
     }
   }
 
-  TimedExperimentStep get currentStep =>
+  dynamic get currentStep =>
       experimentConfig.steps[_currentStepIndex];
 
   int get currentStepIndex => _currentStepIndex;
@@ -340,5 +341,153 @@ class TimedExperimentManager with ChangeNotifier {
   void dispose() {
     _progressTimer?.cancel();
     super.dispose();
+  }
+}
+
+class SideDetectionExperimentManager extends TimedExperimentManager {
+  int _currentBlockIndex = 0;
+  final TextEditingController _experimentIdController = TextEditingController();
+  late String experimentID;
+
+  SideDetectionExperimentManager({
+    required ChewingSideDetectionConfig super.experimentConfig,
+    required super.wearable,
+    required super.sensorConfigProvider,
+    required super.logger,
+  });
+
+  TextEditingController get experimentIdController => _experimentIdController;
+
+  @override
+  int get totalSteps {
+    final blocks = (experimentConfig as ChewingSideDetectionConfig).blocks;
+    return blocks.map((block) => block.steps.length).fold(0, (a, b) => a + b);
+  }
+
+  @override
+  dynamic get currentStep {
+    final block = (experimentConfig as ChewingSideDetectionConfig).blocks[_currentBlockIndex];
+    return block.steps[_currentStepIndex];
+  }
+
+  @override
+  bool get isLastStep {
+    final blocks = (experimentConfig as ChewingSideDetectionConfig).blocks;
+    return (currentBlock.number == blocks.length - 1) && isLastBlockStep;
+  }
+
+  bool get isLastBlockStep {
+    if (currentBlock.steps.isEmpty) return true;
+    return currentStepIndex == currentBlock.steps.length - 1;
+  }
+
+  ChewingSideDetectionExperimentBlock get currentBlock {
+    return (experimentConfig as ChewingSideDetectionConfig).blocks[_currentBlockIndex];
+  }
+
+  bool get hasCurrentStepTimer {
+    if (currentBlock.steps.isEmpty) return false;
+    return currentStep.containsKey("duration");
+  }
+
+  int get overallStepIndex {
+    final blocks = (experimentConfig as ChewingSideDetectionConfig).blocks;
+    int index = _currentStepIndex;
+    for (var i = 0; i < _currentBlockIndex; i++) {
+      index += blocks[i].steps.length;
+    }
+    print(index);
+    return index;
+  }
+
+  void nextStep() {
+    _elapsedSeconds = 0;
+    _state = TimedExperimentState.waitingToStart;
+    if (currentBlock.number == 0) {
+      experimentID = _experimentIdController.text;
+    }
+    if (isLastStep) {
+      finish();
+      return;
+    }
+    if (isLastBlockStep) {
+      nextBlock();
+      return;
+    } 
+
+    _currentStepIndex++;
+    notifyListeners();
+  }
+
+  void finish() {
+    return;
+  }
+
+  void nextBlock() {
+    _currentBlockIndex++;
+    _currentStepIndex = 0;
+    notifyListeners();
+  }
+
+  @override
+  /// Start the timer for the current step (called manually by user)
+  void startCurrentStepTimer() {
+    if (_state != TimedExperimentState.waitingToStart) return;
+
+    _state = TimedExperimentState.running;
+
+    /// Log step start
+
+    // Start the progress timer
+    _progressTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      _elapsedSeconds++;
+      notifyListeners();
+
+      if (_elapsedSeconds >= currentStep["duration"]) {
+        _completeCurrentStep();
+      }
+    });
+
+    notifyListeners();
+  }
+
+  @override
+  void _completeCurrentStep() {
+    _progressTimer?.cancel();
+    _progressTimer = null;
+    nextStep();
+  }
+
+  @override
+  double get progress {
+    if (_state == TimedExperimentState.notStarted ||
+        _state == TimedExperimentState.waitingToStart) {
+      return 0.0;
+    }
+    return _elapsedSeconds / currentStep["duration"];
+  }
+
+  /// Stop the experiment completely
+  @override
+  Future<void> stop() async {
+    _progressTimer?.cancel();
+    _progressTimer = null;
+
+    if (_sensorsConfigured) {
+      await _deactivateSensors();
+      _sensorsConfigured = false;
+    }
+
+    // // Finalize the session logging if we have data
+    // if (_sessionStartTime != null) {
+    //   await logger.finalizeSession();
+    // }
+
+    _state = TimedExperimentState.notStarted;
+    _currentStepIndex = 0;
+    _currentBlockIndex = 0;
+    _elapsedSeconds = 0;
+    _sessionStartTime = null;
+    notifyListeners();
   }
 }

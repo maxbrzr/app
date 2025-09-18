@@ -31,6 +31,7 @@ class _TimedConfigSelectionPageState extends State<TimedConfigSelectionPage> {
   final List<String> _builtinConfigFiles = [
     'lib/apps/timed_experiment/assets/sample_timed_experiment.yaml',
     'lib/apps/timed_experiment/assets/auth_final.yaml',
+    'lib/apps/timed_experiment/assets/chewing_side_detection_experiment.yaml',
   ];
 
   // List of user-loaded configuration files
@@ -229,6 +230,7 @@ class _TimedConfigSelectionPageState extends State<TimedConfigSelectionPage> {
             child: ListView.builder(
               itemCount: _allConfigFiles.length,
               itemBuilder: (context, index) {
+                print(_allConfigFiles);
                 final configPath = _allConfigFiles[index];
                 final configName = _getConfigName(configPath);
                 final isBuiltin = _builtinConfigFiles.contains(configPath);

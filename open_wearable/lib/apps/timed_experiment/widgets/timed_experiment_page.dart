@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
@@ -43,31 +44,45 @@ class _TimedExperimentPageState extends State<TimedExperimentPage> {
   Future<void> _loadConfig() async {
     try {
       // Check if the path exists for external files
-      if (!widget.configPath.startsWith('lib/') && !widget.configPath.startsWith('assets/')) {
+      if (!widget.configPath.startsWith('lib/') &&
+          !widget.configPath.startsWith('assets/')) {
         final file = File(widget.configPath);
         if (!await file.exists()) {
           throw Exception('Configuration file not found');
         }
       }
-      
+
       final config = await TimedExperimentConfig.fromFile(widget.configPath);
-      final logger = TimedExperimentLogger();
-      await logger.initialize(config.name);
-      
+      final TimedExperimentLogger logger = TimedExperimentLogger();
+      if (config is! ChewingSideDetectionConfig) {
+        await logger.initialize(config.name);
+      }
+      print(logger.runtimeType);
+
       setState(() {
         _logger = logger;
-        _manager = TimedExperimentManager(
-          experimentConfig: config,
-          wearable: widget.wearable,
-          sensorConfigProvider: widget.sensorConfigProvider,
-          logger: logger,
-        );
+        if (config is ChewingSideDetectionConfig) {
+          _manager = SideDetectionExperimentManager(
+            experimentConfig: config,
+            wearable: widget.wearable,
+            sensorConfigProvider: widget.sensorConfigProvider,
+            logger: logger,
+          );
+        } else {
+          _manager = TimedExperimentManager(
+            experimentConfig: config,
+            wearable: widget.wearable,
+            sensorConfigProvider: widget.sensorConfigProvider,
+            logger: logger,
+          );
+        }
         _isLoading = false;
       });
     } catch (e) {
       print("Error loading config: ${e.toString()}");
       setState(() {
-        _errorMessage = "Failed to load experiment configuration: ${e.toString()}";
+        _errorMessage =
+            "Failed to load experiment configuration: ${e.toString()}";
         _isLoading = false;
       });
     }
@@ -83,7 +98,7 @@ class _TimedExperimentPageState extends State<TimedExperimentPage> {
   // Share CSV data
   Future<void> _shareData() async {
     if (_logger == null) return;
-    
+
     try {
       final csvFile = _logger!.csvFile;
       if (await csvFile.exists()) {
@@ -175,12 +190,12 @@ class _TimedExperimentPageState extends State<TimedExperimentPage> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        
+
         // Stop the experiment and sensors before navigating back
         if (_manager != null) {
           await _manager!.stop();
         }
-        
+
         if (mounted) {
           Navigator.of(context).pop();
         }
@@ -221,15 +236,61 @@ class TimedExperimentView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final manager = Provider.of<TimedExperimentManager>(context);
-    final currentStep = manager.currentStep;
 
+    if (manager is SideDetectionExperimentManager) {
+      return SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (manager.state == TimedExperimentState.notStarted) ...[
+                _buildSensorConfigs(context, manager),
+                _buildStepsList(context, manager),
+              ] else ...[
+                _buildStepProgressIndicator(manager),
+                if (manager.currentBlock.number == 0)
+                  ...[
+                    SizedBox(height: 12),
+                    PlatformTextField(
+                      controller: manager.experimentIdController,
+                      hintText: "Enter experiment ID",
+                    ),
+                  ],
+                SizedBox(height: 24),
+                if (manager.currentBlock.steps.isEmpty)
+                  Text(
+                    manager.currentBlock.instruction,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                  ),
+                if (manager.currentBlock.steps.isNotEmpty)
+                  ...[
+                    Text(
+                      manager.currentStep["task"],
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                    ),
+                    if (manager.currentStep.containsKey("duration"))
+                      _buildTimerDisplay(context, manager),
+                  ],
+              ],
+              _buildControlButtons(context, manager),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final currentStep = manager.currentStep;
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             if (manager.state == TimedExperimentState.notStarted) ...[
               _buildCsvFileInfo(context, manager),
               _buildSensorConfigs(context, manager),
@@ -237,35 +298,25 @@ class TimedExperimentView extends StatelessWidget {
               _buildSessionIdInfo(context, manager),
             ] else ...[
               _buildStepProgressIndicator(manager),
-              
               SizedBox(height: 24),
-              
               Text(
                 currentStep.name,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
-              
               SizedBox(height: 8),
-              
               Text(
                 currentStep.description,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
-              
               SizedBox(height: 24),
-
               _buildTimerDisplay(context, manager),
             ],
-
             _buildControlButtons(context, manager),
-            
             SizedBox(height: 24),
-
-            if (manager.sessionStartTime != null) 
+            if (manager.sessionStartTime != null)
               _buildSessionInfo(context, manager),
-
           ],
         ),
       ),
@@ -277,7 +328,7 @@ class TimedExperimentView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Step ${manager.currentStepIndex + 1} of ${manager.totalSteps}",
+          "Step ${manager is SideDetectionExperimentManager ? manager.overallStepIndex : manager.currentStepIndex + 1} of ${manager.totalSteps}",
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -285,7 +336,7 @@ class TimedExperimentView extends StatelessWidget {
         ),
         SizedBox(height: 8),
         LinearProgressIndicator(
-          value: (manager.currentStepIndex + 1) / manager.totalSteps,
+          value: (manager is SideDetectionExperimentManager ? manager.overallStepIndex : manager.currentStepIndex + 1) / manager.totalSteps,
           backgroundColor: Colors.grey[300],
         ),
       ],
@@ -293,6 +344,91 @@ class TimedExperimentView extends StatelessWidget {
   }
 
   Widget _buildStepsList(BuildContext context, TimedExperimentManager manager) {
+    if (manager is SideDetectionExperimentManager) {
+      return Card(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Experiment Blocks",
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              SizedBox(height: 12),
+              for (var block in (manager.experimentConfig as ChewingSideDetectionConfig).blocks)
+                ...[
+                  Text(
+                    "Block ${block.number} - ${block.instruction}",
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                  ),
+                  for (var entry in block.steps.asMap().entries)
+                    ...[
+                      Row(
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: entry.key == 0
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.grey[300],
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${entry.key + 1}',
+                                style: TextStyle(
+                                  color:
+                                      entry.key == 0 ? Colors.white : Colors.grey[600],
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  entry.value["task"],
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        fontWeight: entry.key == 0
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                ),
+                                if (entry.value.containsKey("duration"))
+                                  Text(
+                                    '${entry.value["duration"] ~/ 60}:${(entry.value["duration"] % 60).toString().padLeft(2, '0')}',
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: Colors.grey[600],
+                                            ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  SizedBox(height: 12),
+                ],
+            ],
+          ),
+        ),
+      );
+    }
+
     return Card(
       child: Padding(
         padding: EdgeInsets.all(16.0),
@@ -302,15 +438,15 @@ class TimedExperimentView extends StatelessWidget {
             Text(
               "Steps",
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             SizedBox(height: 12),
             ...manager.experimentConfig.steps.asMap().entries.map((entry) {
               final index = entry.key;
               final step = entry.value;
               final isCurrentStep = index == manager.currentStepIndex;
-              
+
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                 child: Row(
@@ -320,15 +456,16 @@ class TimedExperimentView extends StatelessWidget {
                       height: 24,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isCurrentStep 
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey[300],
+                        color: isCurrentStep
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey[300],
                       ),
                       child: Center(
                         child: Text(
                           '${index + 1}',
                           style: TextStyle(
-                            color: isCurrentStep ? Colors.white : Colors.grey[600],
+                            color:
+                                isCurrentStep ? Colors.white : Colors.grey[600],
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -342,15 +479,21 @@ class TimedExperimentView extends StatelessWidget {
                         children: [
                           Text(
                             step.name,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: isCurrentStep ? FontWeight.bold : FontWeight.normal,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontWeight: isCurrentStep
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
                           ),
                           Text(
                             '${step.duration ~/ 60}:${(step.duration % 60).toString().padLeft(2, '0')}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey[600],
+                                    ),
                           ),
                         ],
                       ),
@@ -368,8 +511,15 @@ class TimedExperimentView extends StatelessWidget {
   Widget _buildTimerDisplay(BuildContext context, TimedExperimentManager manager) {
     final minutes = manager.elapsedSeconds ~/ 60;
     final seconds = manager.elapsedSeconds % 60;
-    final totalMinutes = manager.currentStep.duration ~/ 60;
-    final totalSeconds = manager.currentStep.duration % 60;
+    int totalMinutes;
+    int totalSeconds;
+    if (manager is SideDetectionExperimentManager) {
+      totalMinutes = manager.currentStep["duration"] ~/ 60;
+      totalSeconds = manager.currentStep["duration"] % 60;
+    } else {
+      totalMinutes = manager.currentStep.duration ~/ 60;
+      totalSeconds = manager.currentStep.duration % 60;
+    }
 
     return Card(
       child: Padding(
@@ -379,9 +529,9 @@ class TimedExperimentView extends StatelessWidget {
             Text(
               "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}",
               style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontFamily: 'monospace',
-              ),
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                  ),
             ),
             SizedBox(height: 8),
             Text(
@@ -399,7 +549,8 @@ class TimedExperimentView extends StatelessWidget {
     );
   }
 
-  Widget _buildSensorConfigs(BuildContext context, TimedExperimentManager manager) {
+  Widget _buildSensorConfigs(
+      BuildContext context, TimedExperimentManager manager) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -412,8 +563,8 @@ class TimedExperimentView extends StatelessWidget {
             ),
             SizedBox(height: 8),
             // Show effective sensor configurations (global + step overrides)
-            ...manager.experimentConfig.globalSensorConfigs.map((config) => 
-              Padding(
+            ...manager.experimentConfig.globalSensorConfigs.map(
+              (config) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                 child: Row(
                   children: [
@@ -454,6 +605,16 @@ class TimedExperimentView extends StatelessWidget {
         );
 
       case TimedExperimentState.waitingToStart:
+        if (manager is SideDetectionExperimentManager && !manager.hasCurrentStepTimer) {
+          return SizedBox(
+            width: double.infinity,
+            child: PlatformElevatedButton(
+              onPressed: () => manager.nextStep(),
+              child: Text(manager.isLastBlockStep ? "Next Block" : "Next Step"),
+            ),
+          );
+        }
+
         return SizedBox(
           width: double.infinity,
           child: PlatformElevatedButton(
@@ -463,6 +624,72 @@ class TimedExperimentView extends StatelessWidget {
         );
 
       case TimedExperimentState.running:
+        if (manager is SideDetectionExperimentManager) {
+          return Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => manager.stop(),
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.all(Colors.red),
+                        foregroundColor: WidgetStateProperty.all(Colors.white),
+                      ),
+                      child: Text("Abort"),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: PlatformElevatedButton(
+                      onPressed: () => manager.resetCurrentStepTimer(),
+                      child: Text("Reset"),
+                    ),
+                  ),
+                ],
+              ),
+              if ([2, 3, 4].contains(manager.currentBlock.number))
+                Row(
+                  children: [
+                    Expanded(
+                      child: PlatformElevatedButton(
+                        /// Insert logging of "swallowing"
+                        onPressed: () => {},
+                        material: (context, platform) => MaterialElevatedButtonData(
+                          style: ButtonStyle(
+                            backgroundColor: WidgetStateProperty.all(Colors.blue),
+                            foregroundColor: WidgetStateProperty.all(Colors.white),
+                          ),
+                        ),
+                        cupertino: (context, platform) => CupertinoElevatedButtonData(
+                          color: CupertinoColors.activeBlue,
+                        ),
+                        child: Text("Swallowed"),
+                      )
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: PlatformElevatedButton(
+                        /// Insert logging of "new piece"
+                        onPressed: () => {},
+                        material: (context, platform) => MaterialElevatedButtonData(
+                          style: ButtonStyle(
+                            backgroundColor: WidgetStateProperty.all(Colors.green),
+                            foregroundColor: WidgetStateProperty.all(Colors.white),
+                          ),
+                        ),
+                        cupertino: (context, platform) => CupertinoElevatedButtonData(
+                          color: CupertinoColors.activeGreen,
+                        ),
+                        child: Text("New Piece of Food"),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          );
+        }
+
         return Row(
           children: [
             Expanded(
@@ -507,7 +734,8 @@ class TimedExperimentView extends StatelessWidget {
   }
 
   Widget _buildSessionInfo(BuildContext context, TimedExperimentManager manager) {
-    final sessionDuration = DateTime.now().difference(manager.sessionStartTime!);
+    final sessionDuration =
+        DateTime.now().difference(manager.sessionStartTime!);
     final sessionMinutes = sessionDuration.inMinutes;
     final sessionSeconds = sessionDuration.inSeconds % 60;
 
@@ -520,21 +748,25 @@ class TimedExperimentView extends StatelessWidget {
             Text(
               "Session Information",
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             SizedBox(height: 8),
             Text("Session ID: ${manager.sessionId}"),
-            Text("Started: ${manager.sessionStartTime!.toString().substring(0, 19)}"),
-            Text("Duration: $sessionMinutes:${sessionSeconds.toString().padLeft(2, '0')}"),
-            Text("Current Step: ${manager.currentStepIndex + 1}/${manager.totalSteps}"),
+            Text(
+                "Started: ${manager.sessionStartTime!.toString().substring(0, 19)}"),
+            Text(
+                "Duration: $sessionMinutes:${sessionSeconds.toString().padLeft(2, '0')}"),
+            Text(
+                "Current Step: ${manager.currentStepIndex + 1}/${manager.totalSteps}"),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSessionIdInfo(BuildContext context, TimedExperimentManager manager) {
+  Widget _buildSessionIdInfo(
+      BuildContext context, TimedExperimentManager manager) {
     return Card(
       color: Theme.of(context).colorScheme.primaryContainer,
       child: Padding(
@@ -553,8 +785,8 @@ class TimedExperimentView extends StatelessWidget {
                 Text(
                   "Session ID",
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
@@ -562,10 +794,10 @@ class TimedExperimentView extends StatelessWidget {
             Text(
               manager.sessionId,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontFamily: 'monospace',
-                letterSpacing: 2.0,
-              ),
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                    letterSpacing: 2.0,
+                  ),
             ),
             SizedBox(height: 8),
             Text(
@@ -578,10 +810,11 @@ class TimedExperimentView extends StatelessWidget {
     );
   }
 
-  Widget _buildCsvFileInfo(BuildContext context, TimedExperimentManager manager) {
+  Widget _buildCsvFileInfo(
+      BuildContext context, TimedExperimentManager manager) {
     final logger = manager.logger;
     final csvFileName = logger.csvFile.path.split(Platform.pathSeparator).last;
-    
+
     return Card(
       color: Theme.of(context).colorScheme.surfaceVariant,
       child: Padding(
@@ -600,8 +833,8 @@ class TimedExperimentView extends StatelessWidget {
                 Text(
                   "Time Logging",
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
@@ -609,8 +842,8 @@ class TimedExperimentView extends StatelessWidget {
             Text(
               csvFileName,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontFamily: 'monospace',
-              ),
+                    fontFamily: 'monospace',
+                  ),
             ),
             SizedBox(height: 8),
             Text(
@@ -643,13 +876,15 @@ class TimedExperimentView extends StatelessWidget {
     );
   }
 
-  Future<void> _createNewLogFile(BuildContext context, TimedExperimentManager manager) async {
+  Future<void> _createNewLogFile(
+      BuildContext context, TimedExperimentManager manager) async {
     try {
       final archivedFile = await manager.logger.archiveLogFile();
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Moved old file to: ${archivedFile.path.split(Platform.pathSeparator).last}'),
+          content: Text(
+              'Moved old file to: ${archivedFile.path.split(Platform.pathSeparator).last}'),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 3),
         ),
@@ -670,7 +905,7 @@ class TimedExperimentView extends StatelessWidget {
     final fileName = file.path.split('/').last;
     final fileSize = _getFileSize(file);
     final fileDate = _getFileDate(file);
-    
+
     showPlatformDialog(
       context: context,
       builder: (context) => PlatformAlertDialog(

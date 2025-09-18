@@ -82,8 +82,7 @@ flutter:
   assets:
     - lib/apps/posture_tracker/assets/
     - lib/apps/heart_tracker/assets/
-    - lib/apps/timed_experiment/assets/sample_timed_experiment.yaml
-    - lib/apps/timed_experiment/assets/auth_final.yaml
+    - lib/apps/timed_experiment/assets/
 
   # An image asset can refer to one or more resolution-specific "variants", seeq
   # https://flutter.dev/to/resolution-aware-images
