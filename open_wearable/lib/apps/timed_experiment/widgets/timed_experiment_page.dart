@@ -14,6 +14,9 @@ import '../model/timed_experiment_manager.dart';
 import '../model/timed_experiment_logger.dart';
 import 'log_files_page.dart';
 
+final EdgeInsets buttonPadding = EdgeInsets.all(16.0);
+final TextStyle buttonTextStyle = TextStyle(fontSize: 18);
+
 class TimedExperimentPage extends StatefulWidget {
   final Wearable wearable;
   final SensorConfigurationProvider sensorConfigProvider;
@@ -266,6 +269,7 @@ class TimedExperimentView extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                   ),
+                  SizedBox(height: 16),
                 if (manager.currentBlock.steps.isNotEmpty)
                   ...[
                     Text(
@@ -590,7 +594,11 @@ class TimedExperimentView extends StatelessWidget {
           width: double.infinity,
           child: PlatformElevatedButton(
             onPressed: () => manager.startExperiment(),
-            child: Text("Start Experiment"),
+            padding: buttonPadding,
+            child: Text(
+              "Start Experiment",
+              style: buttonTextStyle,
+            ),
           ),
         );
 
@@ -606,29 +614,17 @@ class TimedExperimentView extends StatelessWidget {
         );
 
       case TimedExperimentState.waitingToStart:
-        final random = Random();
-        if (random.nextDouble() < 0.8) {
-          print("Shown!");
-          showPlatformDialog(
-            context: context,
-            builder: (context) => PlatformAlertDialog(
-              title: Text("Earables Replug Test"),
-              content: Text("Please take out your earables and put them back in."),
-              actions: [
-                PlatformDialogAction(
-                  child: Text("OK"),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          );
-        }
         if (manager is SideDetectionExperimentManager && !manager.hasCurrentStepTimer) {
           return SizedBox(
             width: double.infinity,
             child: PlatformElevatedButton(
               onPressed: () => manager.nextStep(),
-              child: Text(manager.isLastBlockStep ? "Next Block" : "Next Step"),
+              padding: buttonPadding,
+              child: Text(
+                manager.isLastStep ? "Finish Experiment" : 
+                  manager.isLastBlockStep ? "Next Block" : "Next Step",
+                style: buttonTextStyle,
+              ),
             ),
           );
         }
@@ -637,7 +633,11 @@ class TimedExperimentView extends StatelessWidget {
           width: double.infinity,
           child: PlatformElevatedButton(
             onPressed: () => manager.startCurrentStepTimer(),
-            child: Text("Start Timer"),
+            padding: buttonPadding,
+            child: Text(
+              "Start Timer",
+              style: buttonTextStyle,
+            ),
           ),
         );
 
@@ -648,58 +648,71 @@ class TimedExperimentView extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => manager.stop(),
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.all(Colors.red),
-                        foregroundColor: WidgetStateProperty.all(Colors.white),
-                      ),
-                      child: Text("Abort"),
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
                     child: PlatformElevatedButton(
                       onPressed: () => manager.resetCurrentStepTimer(),
-                      child: Text("Reset"),
+                      padding: buttonPadding,
+                      child: Text(
+                        "Reset",
+                        style: buttonTextStyle,
+                      ),
                     ),
                   ),
                 ],
               ),
+              SizedBox(height: 160),
               if ([2, 3, 4].contains(manager.currentBlock.number))
                 Row(
                   children: [
                     Expanded(
-                      child: PlatformElevatedButton(
-                        /// Insert logging of "swallowing"
-                        onPressed: () => {},
-                        material: (context, platform) => MaterialElevatedButtonData(
-                          style: ButtonStyle(
-                            backgroundColor: WidgetStateProperty.all(Colors.blue),
-                            foregroundColor: WidgetStateProperty.all(Colors.white),
+                      child: SizedBox(
+                        height: 72,
+                        child: PlatformElevatedButton(
+                          /// Insert logging of "swallowing"
+                          padding: buttonPadding,
+                          onPressed: () => {},
+                          material: (context, platform) => MaterialElevatedButtonData(
+                            style: ButtonStyle(
+                              backgroundColor: WidgetStateProperty.all(Colors.blue),
+                              foregroundColor: WidgetStateProperty.all(Colors.white),
+                            ),
+                          ),
+                          cupertino: (context, platform) => CupertinoElevatedButtonData(
+                            color: CupertinoColors.activeBlue,
+                          ),
+                          child: Center(
+                            child: Text(
+                              "Swallowed",
+                              style: buttonTextStyle,
+                            ),
                           ),
                         ),
-                        cupertino: (context, platform) => CupertinoElevatedButtonData(
-                          color: CupertinoColors.activeBlue,
-                        ),
-                        child: Text("Swallowed"),
                       )
                     ),
                     SizedBox(width: 16),
                     Expanded(
-                      child: PlatformElevatedButton(
-                        /// Insert logging of "new piece"
-                        onPressed: () => {},
-                        material: (context, platform) => MaterialElevatedButtonData(
-                          style: ButtonStyle(
-                            backgroundColor: WidgetStateProperty.all(Colors.green),
-                            foregroundColor: WidgetStateProperty.all(Colors.white),
+                      child: SizedBox(
+                        height: 72,
+                        child: PlatformElevatedButton(
+                          /// Insert logging of "new piece"
+                          onPressed: () => {},
+                          padding: buttonPadding,
+                          material: (context, platform) => MaterialElevatedButtonData(
+                            style: ButtonStyle(
+                              backgroundColor: WidgetStateProperty.all(Colors.green),
+                              foregroundColor: WidgetStateProperty.all(Colors.white),
+                            ),
+                          ),
+                          cupertino: (context, platform) => CupertinoElevatedButtonData(
+                            color: CupertinoColors.activeGreen,
+                          ),
+                          child: Center(
+                            child: Text(
+                              "New Piece of Food",
+                              textAlign: TextAlign.center,
+                              style: buttonTextStyle,
+                            ),
                           ),
                         ),
-                        cupertino: (context, platform) => CupertinoElevatedButtonData(
-                          color: CupertinoColors.activeGreen,
-                        ),
-                        child: Text("New Piece of Food"),
                       ),
                     ),
                   ],
@@ -711,20 +724,13 @@ class TimedExperimentView extends StatelessWidget {
         return Row(
           children: [
             Expanded(
-              child: ElevatedButton(
-                onPressed: () => manager.stop(),
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.all(Colors.red),
-                  foregroundColor: WidgetStateProperty.all(Colors.white),
-                ),
-                child: Text("Abort"),
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
               child: PlatformElevatedButton(
                 onPressed: () => manager.resetCurrentStepTimer(),
-                child: Text("Reset"),
+                padding: buttonPadding,
+                child: Text(
+                  "Reset",
+                  style: buttonTextStyle,
+                ),
               ),
             ),
           ],
@@ -736,8 +742,12 @@ class TimedExperimentView extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: PlatformElevatedButton(
+                padding: buttonPadding,
                 onPressed: () => manager.stop(),
-                child: Text("Finish Experiment"),
+                child: Text(
+                  "Finish Experiment",
+                  style: buttonTextStyle,
+                ),
               ),
             ),
             SizedBox(height: 16),

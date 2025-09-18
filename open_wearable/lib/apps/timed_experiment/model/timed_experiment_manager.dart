@@ -396,7 +396,6 @@ class SideDetectionExperimentManager extends TimedExperimentManager {
     for (var i = 0; i < _currentBlockIndex; i++) {
       index += blocks[i].steps.length;
     }
-    print(index);
     return index;
   }
 
@@ -420,6 +419,13 @@ class SideDetectionExperimentManager extends TimedExperimentManager {
   }
 
   void finish() {
+    // Add functionality to finalize the experiment
+    _state = TimedExperimentState.notStarted;
+    // reset everything
+    _currentStepIndex = 0;
+    _currentBlockIndex = 0;
+    _elapsedSeconds = 0;
+    notifyListeners();
     return;
   }
 
