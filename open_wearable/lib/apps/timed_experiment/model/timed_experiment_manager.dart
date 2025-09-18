@@ -14,7 +14,8 @@ enum TimedExperimentState {
   configuringSensors,
   waitingToStart,
   running,
-  complete,
+  stepComplete,
+  experimentComplete,
 }
 
 class TimedExperimentManager with ChangeNotifier {
@@ -181,7 +182,7 @@ class TimedExperimentManager with ChangeNotifier {
       _currentStepIndex++;
       _prepareCurrentStep();
     } else {
-      _state = TimedExperimentState.complete;
+      _state = TimedExperimentState.experimentComplete;
     }
 
     notifyListeners();
@@ -301,7 +302,7 @@ class TimedExperimentManager with ChangeNotifier {
 
   /// Reset the current step timer back to 0
   void resetCurrentStepTimer() {
-    if (_state == TimedExperimentState.running) {
+    if (_state == TimedExperimentState.running || _state == TimedExperimentState.stepComplete) {
       _progressTimer?.cancel();
       _progressTimer = null;
       _elapsedSeconds = 0;
@@ -406,7 +407,7 @@ class SideDetectionExperimentManager extends TimedExperimentManager {
       experimentID = _experimentIdController.text;
     }
     if (isLastStep) {
-      finish();
+      stop();
       return;
     }
     if (isLastBlockStep) {
@@ -420,8 +421,8 @@ class SideDetectionExperimentManager extends TimedExperimentManager {
 
   void finish() {
     // Add functionality to finalize the experiment
-    _state = TimedExperimentState.notStarted;
     // reset everything
+    _state = TimedExperimentState.notStarted;
     _currentStepIndex = 0;
     _currentBlockIndex = 0;
     _elapsedSeconds = 0;
@@ -459,9 +460,12 @@ class SideDetectionExperimentManager extends TimedExperimentManager {
 
   @override
   void _completeCurrentStep() {
+    // _progressTimer?.cancel();
+    // _progressTimer = null;
     _progressTimer?.cancel();
-    _progressTimer = null;
-    nextStep();
+    _state = TimedExperimentState.stepComplete;
+    notifyListeners();
+    // nextStep();
   }
 
   @override

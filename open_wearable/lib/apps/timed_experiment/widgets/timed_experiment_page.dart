@@ -61,7 +61,6 @@ class _TimedExperimentPageState extends State<TimedExperimentPage> {
       if (config is! ChewingSideDetectionConfig) {
         await logger.initialize(config.name);
       }
-      print(logger.runtimeType);
 
       setState(() {
         _logger = logger;
@@ -736,7 +735,52 @@ class TimedExperimentView extends StatelessWidget {
           ],
         );
 
-      case TimedExperimentState.complete:
+      case TimedExperimentState.stepComplete:
+        if (manager is SideDetectionExperimentManager && !manager.hasCurrentStepTimer) {
+          return SizedBox(
+            width: double.infinity,
+            child: PlatformElevatedButton(
+              onPressed: () => manager.nextStep(),
+              padding: buttonPadding,
+              child: Text(
+                manager.isLastStep ? "Finish Experiment" : 
+                  manager.isLastBlockStep ? "Next Block" : "Next Step",
+                style: buttonTextStyle,
+              ),
+            ),
+          );
+        } 
+
+        return Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: PlatformElevatedButton(
+                onPressed: () => manager.nextStep(),
+                padding: buttonPadding,
+                child: Text(
+                  manager.isLastStep ? "Finish Experiment" : "Next Step",
+                  style: buttonTextStyle,
+                ),
+              ),
+            ),
+            SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: PlatformElevatedButton(
+                onPressed: () => manager.resetCurrentStepTimer(),
+                padding: buttonPadding,
+                child: Text(
+                  "Repeat Step",
+                  style: buttonTextStyle,
+                ),
+              ),
+            ),
+          ],
+        );
+
+      
+      case TimedExperimentState.experimentComplete:
         return Column(
           children: [
             SizedBox(
