@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -605,6 +606,23 @@ class TimedExperimentView extends StatelessWidget {
         );
 
       case TimedExperimentState.waitingToStart:
+        final random = Random();
+        if (random.nextDouble() < 0.8) {
+          print("Shown!");
+          showPlatformDialog(
+            context: context,
+            builder: (context) => PlatformAlertDialog(
+              title: Text("Earables Replug Test"),
+              content: Text("Please take out your earables and put them back in."),
+              actions: [
+                PlatformDialogAction(
+                  child: Text("OK"),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          );
+        }
         if (manager is SideDetectionExperimentManager && !manager.hasCurrentStepTimer) {
           return SizedBox(
             width: double.infinity,

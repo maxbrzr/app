@@ -14,7 +14,7 @@ enum TimedExperimentState {
   configuringSensors,
   waitingToStart,
   running,
-  complete
+  complete,
 }
 
 class TimedExperimentManager with ChangeNotifier {
