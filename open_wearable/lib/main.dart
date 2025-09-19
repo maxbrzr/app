@@ -24,6 +24,10 @@ class CustomLogFilter extends LogFilter {
 }
 
 void main() {
+  // FlutterError.onError = (FlutterErrorDetails details) {
+  //   FlutterError.dumpErrorToConsole(details, forceReport: true);
+  // };
+
   oe.logger = Logger(level: Level.trace, filter: CustomLogFilter());
 
   runApp(
@@ -68,7 +72,8 @@ class _MyAppState extends State<MyApp> {
       // Push a dialog route via NavigatorState (no BuildContext from this widget)
       nav.push(
         DialogRoute<void>(
-          context: rootNavigatorKey.currentContext!, // from navigator, not this widget
+          context: rootNavigatorKey
+              .currentContext!, // from navigator, not this widget
           barrierDismissible: true,
           builder: (_) => PlatformAlertDialog(
             title: const Text('Firmware unsupported'),
@@ -78,7 +83,8 @@ class _MyAppState extends State<MyApp> {
             ),
             actions: <Widget>[
               PlatformDialogAction(
-                cupertino: (_, __) => CupertinoDialogActionData(isDefaultAction: true),
+                cupertino: (_, __) =>
+                    CupertinoDialogActionData(isDefaultAction: true),
                 child: const Text('OK'),
                 // Close via navigator state; no widget context
                 onPressed: () => rootNavigatorKey.currentState?.pop(),

@@ -1,0 +1,70 @@
+experiment_name: "Chewing Side Detection Experiment"
+
+global_sensor_configs:
+  - sensor: pressure
+    sample_rate: 200
+  - sensor: microphone
+    sample_rate: 48000
+  - sensor: ppg
+    sample_rate: 400
+  - sensor: bone_conduction
+    sample_rate: 1600
+  - sensor: imu
+    sample_rate: 800
+
+blocks:
+  - block_number: 0
+    instruction: "Please agree to the consent form."
+  - block_number: 1
+    instruction: "Please wear the device and execute the shown tasks."
+    tasks:
+      - name: "Sit still"
+        # duration lower for debugging
+        duration: 1
+      # - name: "Read a text out loud"
+      #   duration: 30
+      # - name: "Drink a glass of water"
+      #   duration: 30
+      # - name: "Move your head around"
+      #   duration: 30
+      # - name: "Do several facial expressions"
+      #   duration: 30
+  - block_number: 2
+    instruction: "Please wear the device and chew the given food on the indicated side."
+    tasks:
+      - name: "Nuts"
+        duration: 1
+      # - name: "Salted Pretzels"
+      #   duration: 30
+      # - name: "Chips"
+      #   duration: 30
+      # - name: "Cucumber"
+      #   duration: 30
+      # - name: "Apple"
+      #   duration: 30
+      # - name: "Chewing Gum"
+      #   duration: 30
+      # - name: "Banana"
+      #   duration: 30
+      # - name: "Salad"
+      #   duration: 30
+      # - name: "Bread"
+      #   duration: 30
+      # - name: "Cheese"
+      #   duration: 30
+  - block_number: 3
+    instruction: "Please wear the device and chew the given food on the indicated side while listening to a sound."
+    tasks:
+      - name: "Salted Pretzels with music"
+        duration: 1
+      # - name: "Banana via an external speaker"
+      #   duration: 1
+  - block_number: 4
+    instruction: "Please wear the device and chew the given food on the indicated site."
+    tasks:
+      - name: "Bowl"
+        duration: 1
+      # - name: "Bowl"
+      #   duration: 1
+  - block_number: 5
+    instruction: "Please answer the questionnaire."

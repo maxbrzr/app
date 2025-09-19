@@ -67,8 +67,7 @@ class TimedExperimentLogger {
 
     try {
       await for (final entity in directory.list()) {
-        if (entity is File &&
-            entity.path.endsWith('log.csv')) {
+        if (entity is File && entity.path.endsWith('log.csv')) {
           files.add(entity);
         }
       }
@@ -84,7 +83,7 @@ class TimedExperimentLogger {
   /// Archive the current log file by renaming it with a timestamp prefix, similar to log rotation
   Future<File> archiveLogFile() async {
     final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-    
+
     final path = _csvFile.path;
     final lastSeparator = path.lastIndexOf(Platform.pathSeparator);
     var newFileName = '${timestamp}_${path.substring(lastSeparator + 1)}';
@@ -108,6 +107,7 @@ class TimedExperimentLogger {
 
   /// Start a new session
   void startSession(String configurations, String sessionId) {
+    print("Starting session: $sessionId");
     _sessionStartTime = DateTime.now();
     _currentSessionEvents.clear();
     _sensorConfigurations = configurations;
@@ -116,6 +116,7 @@ class TimedExperimentLogger {
 
   /// Log a step start event
   void logStepStart(String stepName, String description, int duration) {
+    print("Logging step start: $stepName");
     final now = DateTime.now();
     final relativeTime = now.difference(_sessionStartTime).inMilliseconds;
 
@@ -132,6 +133,7 @@ class TimedExperimentLogger {
 
   /// Log a step end event
   void logStepEnd() {
+    print("Logging step end");
     if (_currentSessionEvents.isEmpty) return;
 
     final now = DateTime.now();
@@ -160,6 +162,7 @@ class TimedExperimentLogger {
 
   /// Finalize and save the current session to CSV
   Future<void> finalizeSession() async {
+    print("Finalizing session");
     if (_currentSessionEvents.isEmpty) return;
 
     final rows = <List<String>>[];

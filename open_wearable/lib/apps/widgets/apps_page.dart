@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/chew_side_detection/widgets/app.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
@@ -69,11 +70,17 @@ List<AppInfo> _apps = [
       },
     ),
   ),
+  // AppInfo(
+  //   logoPath: "lib/apps/timed_experiment/assets/logo.png",
+  //   title: "Timed Experiment",
+  //   description: "Session-based data collection with global sensor configs",
+  //   widget: TimedExperimentApp(),
+  // ),
   AppInfo(
-    logoPath: "lib/apps/timed_experiment/assets/logo.png",
-    title: "Timed Experiment",
+    logoPath: "lib/apps/chew_side_detection/assets/logo.png",
+    title: "Chewing Side Detection Experiment",
     description: "Session-based data collection with global sensor configs",
-    widget: TimedExperimentApp(),
+    widget: ExperimentApp(),
   ),
 ];
 

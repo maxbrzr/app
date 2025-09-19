@@ -307,7 +307,8 @@ class TimedExperimentManager with ChangeNotifier {
 
   /// Reset the current step timer back to 0
   void resetCurrentStepTimer() {
-    if (_state == TimedExperimentState.running || _state == TimedExperimentState.stepComplete) {
+    if (_state == TimedExperimentState.running ||
+        _state == TimedExperimentState.stepComplete) {
       _progressTimer?.cancel();
       _progressTimer = null;
       _elapsedSeconds = 0;
@@ -331,6 +332,7 @@ class TimedExperimentManager with ChangeNotifier {
     }
 
     // Finalize the session logging if we have data
+    print("_sessionStartTime: $_sessionStartTime");
     if (_sessionStartTime != null) {
       await logger.finalizeSession();
     }
@@ -377,10 +379,19 @@ class SideDetectionExperimentManager extends TimedExperimentManager {
     return block.steps[_currentStepIndex];
   }
 
+  // @override
+  // bool get isLastStep {
+  //   final blocks = (experimentConfig as ChewingSideDetectionConfig).blocks;
+  //   print("currentBlock.number: ${currentBlock.number}");
+  //   print("blocks.length: ${blocks.length}");
+  //   print("isLastBlockStep: $isLastBlockStep");
+  //   return (currentBlock.number == blocks.length - 1) && isLastBlockStep;
+  // }
+
   @override
   bool get isLastStep {
     final blocks = (experimentConfig as ChewingSideDetectionConfig).blocks;
-    return (currentBlock.number == blocks.length - 1) && isLastBlockStep;
+    return (_currentBlockIndex == blocks.length - 1) && isLastBlockStep;
   }
 
   bool get isLastBlockStep {
@@ -414,11 +425,12 @@ class SideDetectionExperimentManager extends TimedExperimentManager {
     if (currentBlock.number == 0) {
       experimentID = _experimentIdController.text;
     }
+    print("isLastStep: $isLastStep");
     if (isLastStep) {
+      print("Stopping experiment");
       stop();
       return;
-    }
-    if (isLastBlockStep) {
+    } else if (isLastBlockStep) {
       nextBlock();
       return;
     }
@@ -473,6 +485,9 @@ class SideDetectionExperimentManager extends TimedExperimentManager {
     // _progressTimer?.cancel();
     // _progressTimer = null;
     _progressTimer?.cancel();
+    _progressTimer = null;
+
+    super.logger.logStepEnd();
     _state = TimedExperimentState.stepComplete;
     notifyListeners();
     // nextStep();
