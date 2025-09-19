@@ -40,32 +40,88 @@ class StepEvent {
   }
 }
 
+class OtherEvent {
+  final int blockNumber;
+  final String instruction;
+  final String taskName;
+  final DateTime timestamp;
+  final int relativeTime;
+  final String eventType;
+
+  OtherEvent({
+    required this.blockNumber,
+    required this.instruction,
+    required this.taskName,
+    required this.timestamp,
+    required this.relativeTime,
+    required this.eventType,
+  });
+
+  List<String> toCsvRow() {
+    return [
+      blockNumber.toString(),
+      instruction,
+      taskName,
+      timestamp.toIso8601String(),
+      relativeTime.toString(),
+      eventType,
+    ];
+  }
+}
+
 /// Logger for ExperimentManager
 class ExperimentLogger {
-  static const String _csvHeader =
-      'Block,Instruction,Task,Duration (s),Start Time,End Time,Relative Start (ms),Relative End (ms),Sensor Configurations';
+  static const String _stepsCsvHeader =
+      'Block,Instruction,Task,DurationS,StartTime,EndTime,RelativeStartMS,RelativeEndMS,SensorConfigurations';
+  static const String _otherCsvHeader =
+      'Block,Instruction,Task,Time,RelativeTimeMS,EventType';
 
-  late File _csvFile;
+  late File _stepsCsvFile;
+  late File _otherCsvFile;
+
   late DateTime _sessionStartTime;
   // late String _sessionId;
   // late String _sensorConfig;
 
-  final List<StepEvent> _events = [];
+  final List<StepEvent> _stepEvents = [];
+  final List<OtherEvent> _otherEvents = [];
 
   Future<void> initialize([String prefix = 'experiment']) async {
     print("prefix = $prefix");
     final dir = await getApplicationDocumentsDirectory();
-    _csvFile = File('${dir.path}/${prefix}_log.csv');
-    if (!await _csvFile.exists()) {
-      await _csvFile.writeAsString('$_csvHeader\n');
+
+    _stepsCsvFile = File('${dir.path}/${prefix}_steps_log.csv');
+    if (!await _stepsCsvFile.exists()) {
+      await _stepsCsvFile.writeAsString('$_stepsCsvHeader\n');
+    }
+
+    _otherCsvFile = File('${dir.path}/${prefix}_other_log.csv');
+    if (!await _otherCsvFile.exists()) {
+      await _otherCsvFile.writeAsString('$_otherCsvHeader\n');
     }
   }
 
   void startSession() {
-    _events.clear();
+    _stepEvents.clear();
     _sessionStartTime = DateTime.now();
     // _sessionId = sessionId;
     // _sensorConfig = sensorConfig;
+  }
+
+  void logOtherEvent(
+      int blockNumber, String instruction, String taskName, String eventType) {
+    final now = DateTime.now();
+    final relative = now.difference(_sessionStartTime).inMilliseconds;
+    final event = OtherEvent(
+      blockNumber: blockNumber,
+      instruction: instruction,
+      taskName: taskName,
+      timestamp: now,
+      relativeTime: relative,
+      eventType: eventType,
+    );
+    print(event.toCsvRow());
+    _otherEvents.add(event);
   }
 
   void logStepStart(
@@ -85,44 +141,58 @@ class ExperimentLogger {
       relativeStartTime: relative,
     );
     print(event.toCsvRow());
-    _events.add(event);
+    _stepEvents.add(event);
   }
 
   void logStepEnd() {
-    if (_events.isEmpty) return;
+    if (_stepEvents.isEmpty) return;
 
     final now = DateTime.now();
     final relative = now.difference(_sessionStartTime).inMilliseconds;
 
-    final event = _events.last;
+    final event = _stepEvents.last;
     event.endTime = now;
     event.relativeEndTime = relative;
     print(event.toCsvRow());
   }
 
   void discardLastStep() {
-    if (_events.isNotEmpty) _events.removeLast();
+    if (_stepEvents.isNotEmpty) _stepEvents.removeLast();
   }
 
   Future<void> finalizeSession() async {
     print("Finalizing session");
-    if (_events.isEmpty) return;
+    if (_stepEvents.isEmpty) return;
 
     final rows = <List<String>>[];
-    for (final e in _events) {
+    for (final e in _stepEvents) {
       rows.add(e.toCsvRow());
     }
 
     final converter = ListToCsvConverter();
     final csvData = converter.convert(rows);
 
-    await _csvFile.writeAsString(csvData, mode: FileMode.append);
+    await _stepsCsvFile.writeAsString(csvData, mode: FileMode.append);
 
-    _events.clear();
+    _stepEvents.clear();
+
+    if (_otherEvents.isEmpty) return;
+
+    final otherRows = <List<String>>[];
+    for (final e in _otherEvents) {
+      otherRows.add(e.toCsvRow());
+    }
+
+    final otherConverter = ListToCsvConverter();
+    final otherCsvData = otherConverter.convert(otherRows);
+
+    await _otherCsvFile.writeAsString(otherCsvData, mode: FileMode.append);
+
+    _otherEvents.clear();
   }
 
-  String get csvPath => _csvFile.path;
-  File get csvFile => _csvFile;
+  String get csvPath => _stepsCsvFile.path;
+  File get csvFile => _stepsCsvFile;
 
   // Future<String> getSessionSummary() async {
   //   if (_events.isEmpty) return 'No data recorded';
@@ -169,15 +239,15 @@ class ExperimentLogger {
   Future<File> archiveLogFile() async {
     final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
 
-    final path = _csvFile.path;
+    final path = _stepsCsvFile.path;
     final lastSeparator = path.lastIndexOf(Platform.pathSeparator);
     var newFileName = '${timestamp}_${path.substring(lastSeparator + 1)}';
     var newPath = path.substring(0, lastSeparator + 1) + newFileName;
 
-    if (await _csvFile.exists()) {
+    if (await _stepsCsvFile.exists()) {
       // rename old file and init new file
-      await _csvFile.rename(newPath);
-      await _csvFile.writeAsString('$_csvHeader\n');
+      await _stepsCsvFile.rename(newPath);
+      await _stepsCsvFile.writeAsString('$_stepsCsvHeader\n');
     }
 
     return File(newPath);

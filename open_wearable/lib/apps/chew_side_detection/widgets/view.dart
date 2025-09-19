@@ -340,39 +340,41 @@ class ExperimentView extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                      child: SizedBox(
-                    height: 72,
-                    child: PlatformElevatedButton(
-                      /// Insert logging of "swallowing"
-                      padding: buttonPadding,
-                      onPressed: () => {},
-                      material: (context, platform) =>
-                          MaterialElevatedButtonData(
-                        style: ButtonStyle(
-                          backgroundColor: WidgetStateProperty.all(Colors.blue),
-                          foregroundColor:
-                              WidgetStateProperty.all(Colors.white),
+                    child: SizedBox(
+                      height: 72,
+                      child: PlatformElevatedButton(
+                        /// Insert logging of "swallowing"
+                        padding: buttonPadding,
+                        onPressed: () => manager.swallowed(),
+                        material: (context, platform) =>
+                            MaterialElevatedButtonData(
+                          style: ButtonStyle(
+                            backgroundColor:
+                                WidgetStateProperty.all(Colors.blue),
+                            foregroundColor:
+                                WidgetStateProperty.all(Colors.white),
+                          ),
                         ),
-                      ),
-                      cupertino: (context, platform) =>
-                          CupertinoElevatedButtonData(
-                        color: CupertinoColors.activeBlue,
-                      ),
-                      child: Center(
-                        child: Text(
-                          "Swallowed",
-                          style: buttonTextStyle,
+                        cupertino: (context, platform) =>
+                            CupertinoElevatedButtonData(
+                          color: CupertinoColors.activeBlue,
+                        ),
+                        child: Center(
+                          child: Text(
+                            "Swallowed",
+                            style: buttonTextStyle,
+                          ),
                         ),
                       ),
                     ),
-                  )),
+                  ),
                   SizedBox(width: 16),
                   Expanded(
                     child: SizedBox(
                       height: 72,
                       child: PlatformElevatedButton(
                         /// Insert logging of "new piece"
-                        onPressed: () => {},
+                        onPressed: () => manager.newPieceOfFood(),
                         padding: buttonPadding,
                         material: (context, platform) =>
                             MaterialElevatedButtonData(

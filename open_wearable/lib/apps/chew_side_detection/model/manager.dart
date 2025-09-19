@@ -212,6 +212,24 @@ class ExperimentManager with ChangeNotifier {
     notifyListeners();
   }
 
+  void swallowed() {
+    logger.logOtherEvent(
+      currentBlock.number,
+      currentBlock.instruction,
+      currentTask!.name,
+      "swallowed",
+    );
+  }
+
+  void newPieceOfFood() {
+    logger.logOtherEvent(
+      currentBlock.number,
+      currentBlock.instruction,
+      currentTask!.name,
+      "newPieceOfFood",
+    );
+  }
+
   /// Start the timer for the current step (called manually by user)
   void startCurrentStepTimer() {
     if (_state != ExperimentState.waitingToStart) return;
