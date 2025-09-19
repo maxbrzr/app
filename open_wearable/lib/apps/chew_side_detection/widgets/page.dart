@@ -60,7 +60,7 @@ class _ExperimentPageState extends State<ExperimentPage> {
 
       final config = await ExperimentConfig.fromFile(widget.configPath);
       final ExperimentLogger logger = ExperimentLogger();
-      await logger.initialize(config.name);
+      // await logger.initialize(config.name);
 
       setState(() {
         _logger = logger;

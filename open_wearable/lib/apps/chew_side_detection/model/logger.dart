@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
@@ -20,8 +21,8 @@ class StepEvent {
     required this.taskName,
     required this.duration,
     required this.startTime,
-    required this.relativeStartTime,
     this.endTime,
+    required this.relativeStartTime,
     this.relativeEndTime,
   });
 
@@ -46,25 +47,25 @@ class ExperimentLogger {
 
   late File _csvFile;
   late DateTime _sessionStartTime;
-  late String _sessionId;
-  late String _sensorConfig;
+  // late String _sessionId;
+  // late String _sensorConfig;
 
   final List<StepEvent> _events = [];
 
   Future<void> initialize([String prefix = 'experiment']) async {
+    print("prefix = $prefix");
     final dir = await getApplicationDocumentsDirectory();
     _csvFile = File('${dir.path}/${prefix}_log.csv');
-
     if (!await _csvFile.exists()) {
       await _csvFile.writeAsString('$_csvHeader\n');
     }
   }
 
-  void startSession(String sensorConfig, String sessionId) {
+  void startSession() {
     _events.clear();
     _sessionStartTime = DateTime.now();
-    _sessionId = sessionId;
-    _sensorConfig = sensorConfig;
+    // _sessionId = sessionId;
+    // _sensorConfig = sensorConfig;
   }
 
   void logStepStart(
@@ -75,17 +76,16 @@ class ExperimentLogger {
   ) {
     final now = DateTime.now();
     final relative = now.difference(_sessionStartTime).inMilliseconds;
-
-    _events.add(
-      StepEvent(
-        blockNumber: blockNumber,
-        taskName: taskName,
-        instruction: instruction,
-        duration: duration,
-        startTime: now,
-        relativeStartTime: relative,
-      ),
+    final event = StepEvent(
+      blockNumber: blockNumber,
+      instruction: instruction,
+      taskName: taskName,
+      duration: duration,
+      startTime: now,
+      relativeStartTime: relative,
     );
+    print(event.toCsvRow());
+    _events.add(event);
   }
 
   void logStepEnd() {
@@ -94,9 +94,10 @@ class ExperimentLogger {
     final now = DateTime.now();
     final relative = now.difference(_sessionStartTime).inMilliseconds;
 
-    final last = _events.last;
-    last.endTime = now;
-    last.relativeEndTime = relative;
+    final event = _events.last;
+    event.endTime = now;
+    event.relativeEndTime = relative;
+    print(event.toCsvRow());
   }
 
   void discardLastStep() {
@@ -105,32 +106,12 @@ class ExperimentLogger {
 
   Future<void> finalizeSession() async {
     print("Finalizing session");
-
     if (_events.isEmpty) return;
 
     final rows = <List<String>>[];
-
-    // Add session header row
-    final now = DateTime.now();
-    final durationSec = now.difference(_sessionStartTime).inSeconds;
-
-    rows.add([
-      _sessionId,
-      '',
-      '',
-      durationSec.toString(),
-      _sessionStartTime.toIso8601String(),
-      now.toIso8601String(),
-      '',
-      '',
-      _sensorConfig,
-    ]);
-
     for (final e in _events) {
-      rows.add(['', ...e.toCsvRow()]);
+      rows.add(e.toCsvRow());
     }
-
-    rows.add(['']); // empty row after session
 
     final converter = ListToCsvConverter();
     final csvData = converter.convert(rows);
@@ -143,26 +124,26 @@ class ExperimentLogger {
   String get csvPath => _csvFile.path;
   File get csvFile => _csvFile;
 
-  Future<String> getSessionSummary() async {
-    if (_events.isEmpty) return 'No data recorded';
+  // Future<String> getSessionSummary() async {
+  //   if (_events.isEmpty) return 'No data recorded';
 
-    final buffer = StringBuffer();
-    buffer.writeln('Session started: $_sessionStartTime');
-    buffer.writeln('Steps recorded: ${_events.length}\n');
+  //   final buffer = StringBuffer();
+  //   buffer.writeln('Session started: $_sessionStartTime');
+  //   buffer.writeln('Steps recorded: ${_events.length}\n');
 
-    for (var i = 0; i < _events.length; i++) {
-      final e = _events[i];
-      buffer.writeln('Step ${i + 1} [${e.blockNumber}]: ${e.taskName}');
-      buffer.writeln('  Description: ${e.instruction}');
-      buffer.writeln('  Duration: ${e.duration}s');
-      buffer.writeln('  Started: ${e.relativeStartTime} ms relative');
-      if (e.relativeEndTime != null) {
-        buffer.writeln('  Ended: ${e.relativeEndTime} ms relative');
-      }
-      buffer.writeln();
-    }
-    return buffer.toString();
-  }
+  //   for (var i = 0; i < _events.length; i++) {
+  //     final e = _events[i];
+  //     buffer.writeln('Step ${i + 1} [${e.blockNumber}]: ${e.taskName}');
+  //     buffer.writeln('  Description: ${e.instruction}');
+  //     buffer.writeln('  Duration: ${e.duration}s');
+  //     buffer.writeln('  Started: ${e.relativeStartTime} ms relative');
+  //     if (e.relativeEndTime != null) {
+  //       buffer.writeln('  Ended: ${e.relativeEndTime} ms relative');
+  //     }
+  //     buffer.writeln();
+  //   }
+  //   return buffer.toString();
+  // }
 
   /// Get all log files in the documents directory
   static Future<List<File>> getAllLogFiles() async {

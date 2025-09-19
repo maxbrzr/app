@@ -25,13 +25,13 @@ class ExperimentView extends StatelessWidget {
               _buildStepsList(context, manager),
             ] else ...[
               _buildStepProgressIndicator(manager),
-              if (manager.currentBlock.number == 0) ...[
-                SizedBox(height: 12),
-                PlatformTextField(
-                  controller: manager.experimentIdController,
-                  hintText: "Enter experiment ID",
-                ),
-              ],
+              // if (manager.currentBlock.number == 0) ...[
+              //   SizedBox(height: 12),
+              //   PlatformTextField(
+              //     controller: manager.experimentIdController,
+              //     hintText: "Enter experiment ID",
+              //   ),
+              // ],
               SizedBox(height: 24),
               if (manager.currentBlock.tasks.isEmpty)
                 Text(
@@ -231,17 +231,48 @@ class ExperimentView extends StatelessWidget {
 
   Widget _buildControlButtons(BuildContext context, ExperimentManager manager) {
     switch (manager.state) {
+      // case ExperimentState.notStarted:
+      //   return SizedBox(
+      //     width: double.infinity,
+      //     child: PlatformElevatedButton(
+      //       onPressed: () => manager.startExperiment(),
+      //       padding: buttonPadding,
+      //       child: Text(
+      //         "Start Experiment",
+      //         style: buttonTextStyle,
+      //       ),
+      //     ),
+      //   );
       case ExperimentState.notStarted:
-        return SizedBox(
-          width: double.infinity,
-          child: PlatformElevatedButton(
-            onPressed: () => manager.startExperiment(),
-            padding: buttonPadding,
-            child: Text(
-              "Start Experiment",
-              style: buttonTextStyle,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            PlatformTextField(
+              controller: manager.experimentIdController,
+              hintText: "Enter experiment ID",
             ),
-          ),
+            const SizedBox(height: 16),
+            PlatformElevatedButton(
+              onPressed: () {
+                final experimentId = manager.experimentIdController.text.trim();
+                if (experimentId.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Please enter an experiment ID"),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+                manager.startExperiment();
+              },
+              padding: buttonPadding,
+              child: Text(
+                "Start Experiment",
+                style: buttonTextStyle,
+              ),
+            ),
+          ],
         );
 
       case ExperimentState.configuringSensors:
@@ -256,6 +287,7 @@ class ExperimentView extends StatelessWidget {
         );
 
       case ExperimentState.waitingToStart:
+        print(!manager.hasCurrentStepTimer);
         if (!manager.hasCurrentStepTimer) {
           return SizedBox(
             width: double.infinity,

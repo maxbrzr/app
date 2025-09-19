@@ -169,9 +169,15 @@ class ExperimentManager with ChangeNotifier {
       _state = ExperimentState.configuringSensors;
       notifyListeners();
 
+      // Get experiment ID from text field
+      experimentID = _experimentIdController.text.trim();
+
+      // 🔹 Initialize the logger with experiment ID
+      await logger.initialize(experimentID);
+
       var timestamp = DateFormat('yyMMdd_HH_mm').format(DateTime.now());
       await _setSensorLogFilePrefix(
-        "${timestamp}_${experimentConfig.name}_${sessionId}_",
+        "${timestamp}_${experimentID}_${sessionId}_",
       );
 
       var selectedConfigurations = await _configureSensors();
@@ -187,7 +193,7 @@ class ExperimentManager with ChangeNotifier {
         },
       ).join("; ");
 
-      logger.startSession(configurations, sessionId);
+      logger.startSession();
       _sessionStartTime = DateTime.now();
 
       // Prepare the first step but don't start the timer yet
@@ -262,15 +268,12 @@ class ExperimentManager with ChangeNotifier {
       return;
     }
 
-    if (currentBlock.number == 0) {
-      experimentID = _experimentIdController.text;
-    }
-
     if (isLastBlockStep) {
       _currentTaskIndex++;
       _currentBlockIndex++;
       _currentBlockTaskIndex = 0;
       notifyListeners();
+      _prepareCurrentStep();
       return;
     }
 
@@ -285,14 +288,16 @@ class ExperimentManager with ChangeNotifier {
       await (leftWearable as EdgeRecorderManager).setFilePrefix(prefix);
     } else {
       throw Exception(
-          "The left wearable does not support setting a log file prefix");
+        "The left wearable does not support setting a log file prefix",
+      );
     }
     if (rightWearable is EdgeRecorderManager) {
       // Set the log file prefix for the wearable
       await (rightWearable as EdgeRecorderManager).setFilePrefix(prefix);
     } else {
       throw Exception(
-          "The left wearable does not support setting a log file prefix");
+        "The right wearable does not support setting a log file prefix",
+      );
     }
   }
 

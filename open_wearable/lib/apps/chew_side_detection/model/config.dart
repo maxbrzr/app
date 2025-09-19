@@ -37,7 +37,7 @@ class ExperimentConfig {
   final List<ExperimentBlock> blocks;
   final Map<String, String> sensorIdMap;
   final List<SensorConfig> globalSensorConfigs;
-  String name = "experiment";
+  // String experimentId = "test_participant";
 
   ExperimentConfig({
     required this.blocks,
@@ -109,24 +109,24 @@ class ExperimentConfig {
 
     final yamlMap = loadYaml(yamlString) as YamlMap;
     final config = ExperimentConfig.fromYaml(yamlMap);
-    config.name = _generateNameFromConfigFile(path);
+    // config.name = _generateNameFromConfigFile(path);
     return config;
   }
 
   /// Generate a configuration name based on the configuration file path
-  static String _generateNameFromConfigFile(String configPath) {
-    String name;
+  // static String _generateNameFromConfigFile(String configPath) {
+  //   String name;
 
-    if (configPath.contains('/')) {
-      name = configPath.split('/').last;
-    } else {
-      name = configPath;
-    }
+  //   if (configPath.contains('/')) {
+  //     name = configPath.split('/').last;
+  //   } else {
+  //     name = configPath;
+  //   }
 
-    if (name.contains('.')) {
-      name = name.substring(0, name.lastIndexOf('.'));
-    }
+  //   if (name.contains('.')) {
+  //     name = name.substring(0, name.lastIndexOf('.'));
+  //   }
 
-    return name.replaceAll(RegExp(r'[^\w\-_]'), '_');
-  }
+  //   return name.replaceAll(RegExp(r'[^\w\-_]'), '_');
+  // }
 }
