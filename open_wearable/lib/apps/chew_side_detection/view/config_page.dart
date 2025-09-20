@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/apps/chew_side_detection/model/config_storage.dart';
-import 'package:open_wearable/apps/chew_side_detection/widgets/page.dart';
-import 'package:open_wearable/apps/chew_side_detection/widgets/log_files_page.dart';
+import 'package:open_wearable/apps/chew_side_detection/controller/storage.dart';
+import 'package:open_wearable/apps/chew_side_detection/view/page.dart';
+import 'package:open_wearable/apps/chew_side_detection/view/log_files_page.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:file_picker/file_picker.dart';
 

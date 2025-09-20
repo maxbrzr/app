@@ -3,11 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/chew_side_detection/controller/controller.dart';
 import 'package:open_wearable/apps/chew_side_detection/model/config.dart';
-import 'package:open_wearable/apps/chew_side_detection/model/logger.dart';
-import 'package:open_wearable/apps/chew_side_detection/model/manager.dart';
-import 'package:open_wearable/apps/chew_side_detection/widgets/log_files_page.dart';
-import 'package:open_wearable/apps/chew_side_detection/widgets/view.dart';
+import 'package:open_wearable/apps/chew_side_detection/controller/logger.dart';
+import 'package:open_wearable/apps/chew_side_detection/controller/manager.dart';
+import 'package:open_wearable/apps/chew_side_detection/view/log_files_page.dart';
+import 'package:open_wearable/apps/chew_side_detection/view/view.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -36,6 +37,7 @@ class ExperimentPage extends StatefulWidget {
 }
 
 class _ExperimentPageState extends State<ExperimentPage> {
+  ExperimentController? _controller;
   ExperimentManager? _manager;
   ExperimentLogger? _logger;
   bool _isLoading = true;
@@ -58,23 +60,25 @@ class _ExperimentPageState extends State<ExperimentPage> {
         }
       }
 
-      final config = await ExperimentConfig.fromFile(widget.configPath);
-      final ExperimentLogger logger = ExperimentLogger();
-      // await logger.initialize(config.name);
+      final expConfig = await ExperimentConfig.fromFile(widget.configPath);
 
       setState(() {
-        _logger = logger;
+        _logger = ExperimentLogger();
 
         _manager = ExperimentManager(
-          experimentConfig: config,
+          expConfig: expConfig,
           leftWearable: widget.leftWearable,
-          leftConfigProvider: widget.leftConfigProvider,
+          leftSensorCfgProvider: widget.leftConfigProvider,
           rightWearable: widget.rightWearable,
-          rightConfigProvider: widget.rightConfigProvider,
-          logger: logger,
+          rightSensorCfgProvider: widget.rightConfigProvider,
         );
 
-        print(_manager.runtimeType);
+        _controller = ExperimentController(
+          expConfig: expConfig,
+          manager: _manager!,
+          logger: _logger!,
+        );
+
         _isLoading = false;
       });
     } catch (e) {
@@ -85,13 +89,6 @@ class _ExperimentPageState extends State<ExperimentPage> {
         _isLoading = false;
       });
     }
-  }
-
-  @override
-  void dispose() {
-    _manager?.stop();
-    _manager?.dispose();
-    super.dispose();
   }
 
   // Share CSV data
@@ -191,8 +188,8 @@ class _ExperimentPageState extends State<ExperimentPage> {
         if (didPop) return;
 
         // Stop the experiment and sensors before navigating back
-        if (_manager != null) {
-          await _manager!.stop();
+        if (_controller != null) {
+          await _controller!.stopExperiment();
         }
 
         if (mounted) {
@@ -221,10 +218,17 @@ class _ExperimentPageState extends State<ExperimentPage> {
           ],
         ),
         body: ChangeNotifierProvider.value(
-          value: _manager,
+          value: _controller,
           child: const ExperimentView(),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _controller?.stopExperiment();
+    _controller?.dispose();
+    super.dispose();
   }
 }

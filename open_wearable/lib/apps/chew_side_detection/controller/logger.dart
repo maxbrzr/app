@@ -101,7 +101,7 @@ class ExperimentLogger {
     }
   }
 
-  void startSession() {
+  void startTask() {
     _stepEvents.clear();
     _sessionStartTime = DateTime.now();
     // _sessionId = sessionId;
@@ -148,7 +148,7 @@ class ExperimentLogger {
     _stepEvents.add(event);
   }
 
-  void logStepEnd() {
+  void logTaskEnd() {
     if (_stepEvents.isEmpty) return;
 
     final now = DateTime.now();

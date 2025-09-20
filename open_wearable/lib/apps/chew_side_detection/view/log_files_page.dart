@@ -4,7 +4,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 
-import '../model/logger.dart';
+import '../controller/logger.dart';
 
 class LogFilesPage extends StatefulWidget {
   const LogFilesPage({super.key});
