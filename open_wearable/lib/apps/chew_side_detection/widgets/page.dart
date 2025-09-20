@@ -103,7 +103,7 @@ class _ExperimentPageState extends State<ExperimentPage> {
       if (await csvFile.exists()) {
         SharePlus.instance.share(
           ShareParams(
-            text: 'Timed Experiment Data',
+            text: 'Experiment Data',
             subject: 'Experiment Results CSV',
             files: [XFile(csvFile.path)],
           ),

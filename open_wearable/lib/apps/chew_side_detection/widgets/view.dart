@@ -62,7 +62,7 @@ class ExperimentView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Step ${manager.currentTaskIndex + 1} of ${manager.totalNumTasks}",
+          "Block ${manager.currentBlockIndex + 1} of ${manager.totalNumBlocks}",
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -70,9 +70,24 @@ class ExperimentView extends StatelessWidget {
         ),
         SizedBox(height: 8),
         LinearProgressIndicator(
-          value: (manager.currentTaskIndex + 1) / manager.totalNumTasks,
+          value: (manager.currentBlockIndex + 1) / (manager.totalNumBlocks),
           backgroundColor: Colors.grey[300],
         ),
+        Text(
+          "Task ${manager.currentBlockTaskIndex + 1} of ${manager.totalNumBlockTasks}",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        SizedBox(height: 8),
+        manager.totalNumBlockTasks == 0
+            ? Container()
+            : LinearProgressIndicator(
+                value: (manager.currentBlockTaskIndex + 1) /
+                    (manager.totalNumBlockTasks),
+                backgroundColor: Colors.grey[300],
+              ),
       ],
     );
   }
@@ -497,11 +512,14 @@ class ExperimentView extends StatelessWidget {
             SizedBox(height: 8),
             Text("Session ID: ${manager.sessionId}"),
             Text(
-                "Started: ${manager.sessionStartTime!.toString().substring(0, 19)}"),
+              "Started: ${manager.sessionStartTime!.toString().substring(0, 19)}",
+            ),
             Text(
-                "Duration: $sessionMinutes:${sessionSeconds.toString().padLeft(2, '0')}"),
+              "Duration: $sessionMinutes:${sessionSeconds.toString().padLeft(2, '0')}",
+            ),
             Text(
-                "Current Step: ${manager.currentTaskIndex + 1}/${manager.totalNumTasks}"),
+              "Current Step: ${manager.currentTaskIndex + 1}/${manager.totalNumTasks}",
+            ),
           ],
         ),
       ),
@@ -557,7 +575,7 @@ class ExperimentView extends StatelessWidget {
     final csvFileName = logger.csvFile.path.split(Platform.pathSeparator).last;
 
     return Card(
-      color: Theme.of(context).colorScheme.surfaceVariant,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Padding(
         padding: EdgeInsets.all(16.0),
         child: Column(
@@ -618,14 +636,17 @@ class ExperimentView extends StatelessWidget {
   }
 
   Future<void> _createNewLogFile(
-      BuildContext context, ExperimentManager manager) async {
+    BuildContext context,
+    ExperimentManager manager,
+  ) async {
     try {
       final archivedFile = await manager.logger.archiveLogFile();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              'Moved old file to: ${archivedFile.path.split(Platform.pathSeparator).last}'),
+            'Moved old file to: ${archivedFile.path.split(Platform.pathSeparator).last}',
+          ),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 3),
         ),

@@ -72,7 +72,8 @@ class _LogFilesPageState extends State<LogFilesPage> {
       builder: (context) => PlatformAlertDialog(
         title: Text('Delete Log File'),
         content: Text(
-            'Are you sure you want to delete "${_getFileDisplayName(file)}"? This action cannot be undone.'),
+          'Are you sure you want to delete "${_getFileDisplayName(file)}"? This action cannot be undone.',
+        ),
         actions: [
           PlatformDialogAction(
             child: Text('Cancel'),

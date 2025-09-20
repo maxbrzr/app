@@ -11,6 +11,8 @@ global_sensor_configs:
     sample_rate: 1600
   - sensor: imu
     sample_rate: 800
+  - sensor: temperature
+    sample_rate: 200
 
 blocks:
   - block_number: 0

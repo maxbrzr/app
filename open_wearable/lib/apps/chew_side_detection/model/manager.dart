@@ -22,15 +22,17 @@ enum ExperimentState {
 class ExperimentManager with ChangeNotifier {
   final ExperimentConfig experimentConfig;
   final Wearable leftWearable;
-  final SensorConfigurationProvider leftConfigProvider;
   final Wearable rightWearable;
+  final SensorConfigurationProvider leftConfigProvider;
   final SensorConfigurationProvider rightConfigProvider;
   final ExperimentLogger logger;
   final TextEditingController _experimentIdController = TextEditingController();
   late String experimentID;
 
-  late List<SensorConfiguration> _sensorConfigurations;
-  late Map<String, SensorConfiguration> _sensorIdToConfigMap;
+  late List<SensorConfiguration> _leftSensorConfigurations;
+  late List<SensorConfiguration> _rightSensorConfigurations;
+  late Map<String, SensorConfiguration> _leftSensorIdToConfigMap;
+  late Map<String, SensorConfiguration> _rightSensorIdToConfigMap;
 
   // Indices
   int _currentBlockIndex = 0;
@@ -45,6 +47,9 @@ class ExperimentManager with ChangeNotifier {
   bool _sensorsConfigured = false;
   String sessionId = _generateSessionId();
 
+  // test stream
+  // StreamSubscription? subscription;
+
   ExperimentManager({
     required this.experimentConfig,
     required this.leftWearable,
@@ -55,53 +60,44 @@ class ExperimentManager with ChangeNotifier {
   }) {
     if (leftWearable is SensorConfigurationManager) {
       // Get all available sensor configurations
-      _sensorConfigurations =
+      _leftSensorConfigurations =
           (leftWearable as SensorConfigurationManager).sensorConfigurations;
-      _sensorIdToConfigMap = {};
+      _leftSensorIdToConfigMap = {};
 
       // Create a mapping from sensor IDs to their configurations
-      for (var configuration in _sensorConfigurations) {
+      for (var cfg in _leftSensorConfigurations) {
         // Map the sensor ID to the configuration
-        _sensorIdToConfigMap[configuration.name] = configuration;
+        _leftSensorIdToConfigMap[cfg.name] = cfg;
       }
     } else {
       throw Exception(
-          "The left wearable does not support sensor configuration");
+        "The left wearable does not support sensor configuration",
+      );
     }
     if (rightWearable is SensorConfigurationManager) {
       // Get all available sensor configurations
-      _sensorConfigurations =
+      _rightSensorConfigurations =
           (rightWearable as SensorConfigurationManager).sensorConfigurations;
-      _sensorIdToConfigMap = {};
+      _rightSensorIdToConfigMap = {};
 
       // Create a mapping from sensor IDs to their configurations
-      for (var configuration in _sensorConfigurations) {
+      for (var configuration in _rightSensorConfigurations) {
         // Map the sensor ID to the configuration
-        _sensorIdToConfigMap[configuration.name] = configuration;
+        _rightSensorIdToConfigMap[configuration.name] = configuration;
       }
     } else {
       throw Exception(
-          "The right wearable does not support sensor configuration");
+        "The right wearable does not support sensor configuration",
+      );
     }
-    // for (var blockEntry in experimentConfig.blocks.asMap().entries) {
-    //   final blockIndex = blockEntry.key;
-    //   final instruction = blockEntry.value.instruction;
-    //   final block = blockEntry.value;
-
-    //   for (var taskEntry in block.tasks.asMap().entries) {
-    //     final taskIndex = taskEntry.key;
-    //     final task = taskEntry.value;
-
-    //     print(
-    //         'Block $blockIndex, Instruction: $instruction, Task $taskIndex: ${task.name}');
-    //   }
-    // }
   }
 
+  // Index getters
   int get currentBlockIndex => _currentBlockIndex;
   int get currentBlockTaskIndex => _currentBlockTaskIndex;
   int get currentTaskIndex => _currentTaskIndex;
 
+  // Getters
   ExperimentBlock get currentBlock =>
       experimentConfig.blocks[_currentBlockIndex];
 
@@ -111,9 +107,26 @@ class ExperimentManager with ChangeNotifier {
     return block.tasks[_currentBlockTaskIndex];
   }
 
+  // Number getters
   int get totalNumTasks =>
       experimentConfig.blocks.fold(0, (sum, block) => sum + block.tasks.length);
 
+  int get totalNumBlocks =>
+      experimentConfig.blocks.fold(0, (sum, block) => sum + 1);
+
+  int get totalNumBlockTasks =>
+      experimentConfig.blocks[_currentBlockIndex].tasks.length;
+
+  bool get isLastBlockStep {
+    if (currentBlock.tasks.isEmpty) return true;
+    return currentBlockTaskIndex == currentBlock.tasks.length - 1;
+  }
+
+  bool get isLastStep {
+    return _currentTaskIndex == totalNumTasks - 1;
+  }
+
+  // State getters
   ExperimentState get state => _state;
   int get elapsedSeconds => _elapsedSeconds;
   DateTime? get sessionStartTime => _sessionStartTime;
@@ -135,15 +148,6 @@ class ExperimentManager with ChangeNotifier {
   }
 
   TextEditingController get experimentIdController => _experimentIdController;
-
-  bool get isLastBlockStep {
-    if (currentBlock.tasks.isEmpty) return true;
-    return currentBlockTaskIndex == currentBlock.tasks.length - 1;
-  }
-
-  bool get isLastStep {
-    return _currentTaskIndex == totalNumTasks - 1;
-  }
 
   bool get hasCurrentStepTimer {
     if (currentBlock.tasks.isEmpty) return false;
@@ -172,18 +176,33 @@ class ExperimentManager with ChangeNotifier {
       // Get experiment ID from text field
       experimentID = _experimentIdController.text.trim();
 
-      // 🔹 Initialize the logger with experiment ID
+      // Initialize the logger with experiment ID
       await logger.initialize(experimentID);
 
       var timestamp = DateFormat('yyMMdd_HH_mm').format(DateTime.now());
       await _setSensorLogFilePrefix(
-        "${timestamp}_${experimentID}_${sessionId}_",
+        "${experimentID}_${timestamp}_",
       );
 
-      var selectedConfigurations = await _configureSensors();
+      var (leftSelectedCfgs, rightSelectedCfgs) = await _configureSensors();
       _sensorsConfigured = true;
 
-      String configurations = selectedConfigurations.map(
+      // if (leftWearable is SensorManager) {
+      //   List<Sensor> sensors = (leftWearable as SensorManager).sensors;
+      //   for (Sensor sensor in sensors) {
+      //     print("Sensor: ${sensor.sensorName}");
+      //     if (sensor.sensorName == "TEMPERATURE_SENSOR") {
+      //       subscription = sensor.sensorStream.listen(
+      //         (value) {
+      //           // Handle the new sensor value
+      //           print("Timestamp: ${value.timestamp}");
+      //           print("Values: ${value.valueStrings}");
+      //         },
+      //       );
+      //     }
+      //   }
+      // }
+      String leftSelectedCfgsString = leftSelectedCfgs.map(
         (entry) {
           String name = entry.$1.name;
           String frequency = entry.$2 is SensorFrequencyConfigurationValue
@@ -192,6 +211,19 @@ class ExperimentManager with ChangeNotifier {
           return "$name: $frequency";
         },
       ).join("; ");
+
+      String rightSelectedCfgsString = rightSelectedCfgs.map(
+        (entry) {
+          String name = entry.$1.name;
+          String frequency = entry.$2 is SensorFrequencyConfigurationValue
+              ? "${(entry.$2 as SensorFrequencyConfigurationValue).frequencyHz}Hz"
+              : "configured";
+          return "$name: $frequency";
+        },
+      ).join("; ");
+
+      print(leftSelectedCfgsString);
+      print(rightSelectedCfgsString);
 
       logger.startSession();
       _sessionStartTime = DateTime.now();
@@ -303,7 +335,7 @@ class ExperimentManager with ChangeNotifier {
   Future<void> _setSensorLogFilePrefix(String prefix) async {
     if (leftWearable is EdgeRecorderManager) {
       // Set the log file prefix for the wearable
-      await (leftWearable as EdgeRecorderManager).setFilePrefix(prefix);
+      await (leftWearable as EdgeRecorderManager).setFilePrefix("left_$prefix");
     } else {
       throw Exception(
         "The left wearable does not support setting a log file prefix",
@@ -311,7 +343,8 @@ class ExperimentManager with ChangeNotifier {
     }
     if (rightWearable is EdgeRecorderManager) {
       // Set the log file prefix for the wearable
-      await (rightWearable as EdgeRecorderManager).setFilePrefix(prefix);
+      await (rightWearable as EdgeRecorderManager)
+          .setFilePrefix("right_$prefix");
     } else {
       throw Exception(
         "The right wearable does not support setting a log file prefix",
@@ -319,86 +352,133 @@ class ExperimentManager with ChangeNotifier {
     }
   }
 
+  SensorFrequencyConfigurationValue? findBestMatch(
+    List<SensorConfigurationValue> values,
+    SensorConfig experimentSensorConfig,
+  ) {
+    SensorFrequencyConfigurationValue? bestMatch;
+    double minDiff = 1000000;
+
+    for (var value in values) {
+      if (value is SensorFrequencyConfigurationValue) {
+        double diff =
+            (value.frequencyHz - experimentSensorConfig.sampleRate).abs();
+        if (diff < minDiff) {
+          minDiff = diff;
+          bestMatch = value;
+        }
+        if (minDiff == 0) {
+          break;
+        }
+      }
+    }
+    return bestMatch;
+  }
+
+  void setConfigProvider(
+    String? sensorId,
+    SensorConfigurationProvider cfgProvider,
+    Map<String, SensorConfiguration<SensorConfigurationValue>>
+        sensorIdToConfigMap,
+    SensorConfig experimentSensorConfig,
+  ) {
+    if (sensorId != null && sensorIdToConfigMap.containsKey(sensorId)) {
+      final cfg = sensorIdToConfigMap[sensorId]!;
+
+      if (cfg is SensorFrequencyConfiguration) {
+        List<SensorConfigurationValue> values =
+            cfgProvider.getSensorConfigurationValues(cfg, distinct: true);
+
+        // Find the closest sample rate
+        final bestMatch = findBestMatch(values, experimentSensorConfig);
+
+        if (bestMatch != null) {
+          cfgProvider.addSensorConfiguration(
+            cfg,
+            bestMatch,
+          );
+        }
+      }
+
+      // for all sensors enable recording
+      // for skin temp sensor enable streaming
+      if (cfg is ConfigurableSensorConfiguration) {
+        if (cfg.availableOptions.contains(RecordSensorConfigOption())) {
+          cfgProvider.addSensorConfigurationOption(
+            cfg,
+            RecordSensorConfigOption(),
+          );
+        }
+        if (sensorId == "temperature" &&
+            cfg.availableOptions.contains(StreamSensorConfigOption())) {
+          cfgProvider.addSensorConfigurationOption(
+            cfg,
+            StreamSensorConfigOption(),
+          );
+        }
+      }
+    }
+  }
+
   /// Configure sensors based on global configuration
   Future<
-      List<
-          (
-            SensorConfiguration<SensorConfigurationValue>,
-            SensorConfigurationValue
-          )>> _configureSensors() async {
-    if ((leftWearable is! SensorConfigurationManager ||
-        rightWearable is! SensorConfigurationManager)) {
-      throw Exception("The wearable does not support sensor configuration");
+      (
+        List<
+            (
+              SensorConfiguration<SensorConfigurationValue>,
+              SensorConfigurationValue
+            )>,
+        List<
+            (
+              SensorConfiguration<SensorConfigurationValue>,
+              SensorConfigurationValue
+            )>
+      )> _configureSensors() async {
+    if (leftWearable is! SensorConfigurationManager) {
+      throw Exception(
+          "The left wearable does not support sensor configuration");
+    }
+    if (rightWearable is! SensorConfigurationManager) {
+      throw Exception(
+          "The right wearable does not support sensor configuration");
     }
 
     // Configure each sensor according to the global configuration
-    for (var experimentSensorConfig in experimentConfig.globalSensorConfigs) {
-      final sensorName = experimentSensorConfig.sensor.toLowerCase();
+    for (var sensorConfig in experimentConfig.globalSensorConfigs) {
+      final sensorName = sensorConfig.sensor.toLowerCase();
 
       // Get the sensor ID from the configuration
       final sensorId = experimentConfig.getSensorId(sensorName);
 
-      if (sensorId != null && _sensorIdToConfigMap.containsKey(sensorId)) {
-        final configuration = _sensorIdToConfigMap[sensorId]!;
-
-        if (configuration is SensorFrequencyConfiguration) {
-          List<SensorConfigurationValue> values = leftConfigProvider
-              .getSensorConfigurationValues(configuration, distinct: true);
-
-          // Find the closest sample rate
-          SensorFrequencyConfigurationValue? bestMatch;
-          double minDiff = 1000000;
-
-          for (var value in values) {
-            if (value is SensorFrequencyConfigurationValue) {
-              double diff =
-                  (value.frequencyHz - experimentSensorConfig.sampleRate).abs();
-              if (diff < minDiff) {
-                minDiff = diff;
-                bestMatch = value;
-              }
-              if (minDiff == 0) {
-                break;
-              }
-            }
-          }
-
-          if (bestMatch != null) {
-            leftConfigProvider.addSensorConfiguration(
-              configuration,
-              bestMatch,
-            );
-            rightConfigProvider.addSensorConfiguration(
-              configuration,
-              bestMatch,
-            );
-          }
-        }
-
-        if (configuration is ConfigurableSensorConfiguration) {
-          if (configuration.availableOptions
-              .contains(RecordSensorConfigOption())) {
-            leftConfigProvider.addSensorConfigurationOption(
-              configuration,
-              RecordSensorConfigOption(),
-            );
-            rightConfigProvider.addSensorConfigurationOption(
-              configuration,
-              RecordSensorConfigOption(),
-            );
-          }
-        }
-      }
+      setConfigProvider(
+        sensorId,
+        leftConfigProvider,
+        _leftSensorIdToConfigMap,
+        sensorConfig,
+      );
+      setConfigProvider(
+        sensorId,
+        rightConfigProvider,
+        _rightSensorIdToConfigMap,
+        sensorConfig,
+      );
     }
 
-    var selectedConfigurations = leftConfigProvider.getSelectedConfigurations();
-    for (var entry in selectedConfigurations) {
+    var leftSelectedCfgs = leftConfigProvider.getSelectedConfigurations();
+    for (var entry in leftSelectedCfgs) {
       SensorConfiguration config = entry.$1;
       SensorConfigurationValue value = entry.$2;
       config.setConfiguration(value);
     }
 
-    return selectedConfigurations;
+    var rightSelectedCfgs = rightConfigProvider.getSelectedConfigurations();
+    for (var entry in rightSelectedCfgs) {
+      SensorConfiguration config = entry.$1;
+      SensorConfigurationValue value = entry.$2;
+      config.setConfiguration(value);
+    }
+
+    return (leftSelectedCfgs, rightSelectedCfgs);
   }
 
   /// Deactivate all configured sensors
@@ -413,23 +493,36 @@ class ExperimentManager with ChangeNotifier {
       final sensorName = sensorConfig.sensor.toLowerCase();
       final sensorId = experimentConfig.getSensorId(sensorName);
 
-      if (sensorId != null && _sensorIdToConfigMap.containsKey(sensorId)) {
-        final configuration = _sensorIdToConfigMap[sensorId]!;
-        if (configuration is ConfigurableSensorConfiguration) {
+      if (sensorId != null && _leftSensorIdToConfigMap.containsKey(sensorId)) {
+        final cfg = _leftSensorIdToConfigMap[sensorId]!;
+        if (cfg is ConfigurableSensorConfiguration) {
           // Remove streaming option to disable the sensor
           leftConfigProvider.removeSensorConfigurationOption(
-            configuration,
+            cfg,
             RecordSensorConfigOption(),
           );
-          rightConfigProvider.removeSensorConfigurationOption(
-            configuration,
-            RecordSensorConfigOption(),
-          );
-          var value =
-              leftConfigProvider.getSelectedConfigurationValue(configuration);
+          var value = leftConfigProvider.getSelectedConfigurationValue(cfg);
           if (value != null) {
-            configuration.setConfiguration(
-                value as ConfigurableSensorConfigurationValue);
+            cfg.setConfiguration(
+              value as ConfigurableSensorConfigurationValue,
+            );
+          }
+        }
+      }
+
+      if (sensorId != null && _rightSensorIdToConfigMap.containsKey(sensorId)) {
+        final cfg = _rightSensorIdToConfigMap[sensorId]!;
+        if (cfg is ConfigurableSensorConfiguration) {
+          // Remove streaming option to disable the sensor
+          rightConfigProvider.removeSensorConfigurationOption(
+            cfg,
+            RecordSensorConfigOption(),
+          );
+          var value = rightConfigProvider.getSelectedConfigurationValue(cfg);
+          if (value != null) {
+            cfg.setConfiguration(
+              value as ConfigurableSensorConfigurationValue,
+            );
           }
         }
       }
@@ -458,6 +551,7 @@ class ExperimentManager with ChangeNotifier {
     _progressTimer = null;
 
     if (_sensorsConfigured) {
+      // subscription?.cancel();
       await _deactivateSensors();
       _sensorsConfigured = false;
     }

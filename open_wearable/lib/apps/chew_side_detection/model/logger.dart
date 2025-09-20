@@ -72,7 +72,7 @@ class OtherEvent {
 /// Logger for ExperimentManager
 class ExperimentLogger {
   static const String _stepsCsvHeader =
-      'Block,Instruction,Task,DurationS,StartTime,EndTime,RelativeStartMS,RelativeEndMS,SensorConfigurations';
+      'Block,Instruction,Task,DurationS,StartTime,EndTime,RelativeStartMS,RelativeEndMS';
   static const String _otherCsvHeader =
       'Block,Instruction,Task,Time,RelativeTimeMS,EventType';
 
@@ -109,7 +109,11 @@ class ExperimentLogger {
   }
 
   void logOtherEvent(
-      int blockNumber, String instruction, String taskName, String eventType) {
+    int blockNumber,
+    String instruction,
+    String taskName,
+    String eventType,
+  ) {
     final now = DateTime.now();
     final relative = now.difference(_sessionStartTime).inMilliseconds;
     final event = OtherEvent(
