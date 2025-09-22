@@ -2,10 +2,11 @@ import 'package:yaml/yaml.dart';
 
 /// Represents a task for chewing side detection
 class Task {
+  final String id;
   final String name;
   final int duration;
 
-  Task({required this.name, required this.duration});
+  Task({required this.id, required this.name, required this.duration});
 }
 
 /// Represents an experiment block for chewing side detection
@@ -29,17 +30,20 @@ class ExperimentBlock {
 
     final List<Task> tasks = [];
     for (var task in yamlTasks) {
+      final id = task["id"] as String;
       final name = task["name"] as String;
       // print("task name: $name");
       tasks.add(
         Task(
-          name: "$name-left",
+          id: "$id-left",
+          name: "$name on the left",
           duration: task["duration"] as int,
         ),
       );
       tasks.add(
         Task(
-          name: "$name-right",
+          id: "$id-right",
+          name: "$name on the right",
           duration: task["duration"] as int,
         ),
       );

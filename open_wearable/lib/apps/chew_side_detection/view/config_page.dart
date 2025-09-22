@@ -31,6 +31,7 @@ class _ConfigSelectionPageState extends State<ConfigSelectionPage> {
   // List of available configuration files
   final List<String> _builtinConfigFiles = [
     'lib/apps/chew_side_detection/assets/experiment.yaml',
+    'lib/apps/chew_side_detection/assets/test.yaml',
   ];
 
   // List of user-loaded configuration files

@@ -399,6 +399,19 @@ class ExperimentView extends StatelessWidget {
           ),
         );
 
+      case ExperimentState.reapplyingWearables:
+        return SizedBox(
+          width: double.infinity,
+          child: PlatformElevatedButton(
+            onPressed: () => controller.reappliedWearables(),
+            padding: buttonPadding,
+            child: Text(
+              "Reapplied Wearables",
+              style: buttonTextStyle,
+            ),
+          ),
+        );
+
       case ExperimentState.taskRunning:
         return Column(
           children: [

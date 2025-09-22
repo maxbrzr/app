@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +11,7 @@ import 'logger.dart';
 enum ExperimentState {
   experimentNotStarted,
   configuringSensors,
+  reapplyingWearables,
   taskWaiting,
   taskRunning,
   taskComplete,
@@ -21,7 +23,6 @@ class ExperimentController with ChangeNotifier {
   final ExperimentManager manager;
   final ExperimentLogger logger;
   final TextEditingController _expIdController = TextEditingController();
-
   late String experimentId;
 
   // State
@@ -108,14 +109,14 @@ class ExperimentController with ChangeNotifier {
       await logger.initialize(experimentId);
 
       // Set sensor log file prefix
-      await manager.setSensorLogFilePrefix(
-        "${experimentId}_${DateFormat('yyMMdd_HH_mm').format(DateTime.now())}_",
-      );
+      // await manager.setSensorLogFilePrefix(
+      //   "${experimentId}_${DateFormat('yyMMdd_HH_mm').format(DateTime.now())}_",
+      // );
 
-      await manager.configureSensors();
-      _sensorsConfigured = true;
+      // await manager.configureSensors();
+      // _sensorsConfigured = true;
 
-      logger.startTask();
+      logger.startExperiment();
       _sessionStartTime = DateTime.now();
 
       _prepareTask();
@@ -126,18 +127,11 @@ class ExperimentController with ChangeNotifier {
     }
   }
 
-  /// Prepare the current step (without starting the timer)
-  void _prepareTask() {
-    _elapsedSeconds = 0;
-    _state = ExperimentState.taskWaiting;
-    notifyListeners();
-  }
-
   void swallowed() {
     logger.logOtherEvent(
       currentBlock.number,
       currentBlock.instruction,
-      currentTask!.name,
+      currentTask!.id,
       "swallowed",
     );
   }
@@ -146,13 +140,13 @@ class ExperimentController with ChangeNotifier {
     logger.logOtherEvent(
       currentBlock.number,
       currentBlock.instruction,
-      currentTask!.name,
+      currentTask!.id,
       "newPieceOfFood",
     );
   }
 
   /// Start the timer for the current step (called manually by user)
-  void startTaskTimer() {
+  Future<void> startTaskTimer() async {
     if (_state != ExperimentState.taskWaiting) return;
     // If there's no task, do nothing
     final task = currentTask;
@@ -160,11 +154,21 @@ class ExperimentController with ChangeNotifier {
 
     _state = ExperimentState.taskRunning;
 
+    //Set sensor log file prefix
+    final dateStamp = DateFormat('yyMMdd_HH_mm').format(DateTime.now());
+
+    await manager.setSensorLogFilePrefix(
+      "${experimentId}_${currentBlock.number}_${currentTask!.id}_${dateStamp}_",
+    );
+
+    await manager.configureSensors();
+    _sensorsConfigured = true;
+
     // Log step start
     logger.logStepStart(
       currentBlock.number,
       currentBlock.instruction,
-      task.name,
+      task.id,
       task.duration,
     );
 
@@ -182,14 +186,47 @@ class ExperimentController with ChangeNotifier {
   }
 
   /// Complete the current step
-  void _completeTask() {
+  Future<void> _completeTask() async {
     _progressTimer?.cancel();
     _progressTimer = null;
 
     logger.logTaskEnd();
 
+    if (_sensorsConfigured) {
+      // subscription?.cancel();
+      await manager.deactivateSensors();
+      _sensorsConfigured = false;
+    }
+
     _state = ExperimentState.taskComplete;
     notifyListeners();
+  }
+
+  void reappliedWearables() {
+    _prepareTask();
+  }
+
+  void _shouldReapplyWearables() {
+    _state = ExperimentState.reapplyingWearables;
+    notifyListeners();
+  }
+
+  /// Prepare the current step (without starting the timer)
+  void _prepareTask() {
+    _elapsedSeconds = 0;
+    _state = ExperimentState.taskWaiting;
+    notifyListeners();
+  }
+
+  void _performAction() {
+    final random = Random();
+    final chance = random.nextDouble(); // value between 0.0 and 1.0
+
+    if (chance < 0.1) {
+      _shouldReapplyWearables(); // 10% chance
+    } else {
+      _prepareTask(); // 90% chance
+    }
   }
 
   /// Move to the next step in the experiment process
@@ -210,14 +247,14 @@ class ExperimentController with ChangeNotifier {
       _currentBlockIndex++;
       _currentBlockTaskIndex = 0;
       notifyListeners();
-      _prepareTask();
+      _performAction();
       return;
     }
 
     _currentTaskIndex++;
     _currentBlockTaskIndex++;
     notifyListeners();
-    _prepareTask(); // Prepare the next step but don't start timer
+    _performAction(); // Prepare the next step but don't start timer
   }
 
   /// Reset the current step timer back to 0
@@ -241,15 +278,15 @@ class ExperimentController with ChangeNotifier {
     _progressTimer?.cancel();
     _progressTimer = null;
 
-    if (_sensorsConfigured) {
-      // subscription?.cancel();
-      await manager.deactivateSensors();
-      _sensorsConfigured = false;
-    }
+    // if (_sensorsConfigured) {
+    //   // subscription?.cancel();
+    //   await manager.deactivateSensors();
+    //   _sensorsConfigured = false;
+    // }
 
     // Finalize the session logging if we have data
     if (_sessionStartTime != null) {
-      await logger.finalizeSession();
+      await logger.finalizeExperiment();
     }
 
     _state = ExperimentState.experimentNotStarted;

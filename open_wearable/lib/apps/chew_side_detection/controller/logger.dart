@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 class StepEvent {
   final int blockNumber;
   final String instruction;
-  final String taskName;
+  final String taskId;
   final int duration;
   final DateTime startTime;
   DateTime? endTime;
@@ -18,7 +18,7 @@ class StepEvent {
   StepEvent({
     required this.blockNumber,
     required this.instruction,
-    required this.taskName,
+    required this.taskId,
     required this.duration,
     required this.startTime,
     this.endTime,
@@ -30,7 +30,7 @@ class StepEvent {
     return [
       blockNumber.toString(),
       instruction,
-      taskName,
+      taskId,
       duration.toString(),
       startTime.toIso8601String(),
       endTime?.toIso8601String() ?? '',
@@ -43,7 +43,7 @@ class StepEvent {
 class OtherEvent {
   final int blockNumber;
   final String instruction;
-  final String taskName;
+  final String taskId;
   final DateTime timestamp;
   final int relativeTime;
   final String eventType;
@@ -51,7 +51,7 @@ class OtherEvent {
   OtherEvent({
     required this.blockNumber,
     required this.instruction,
-    required this.taskName,
+    required this.taskId,
     required this.timestamp,
     required this.relativeTime,
     required this.eventType,
@@ -61,7 +61,7 @@ class OtherEvent {
     return [
       blockNumber.toString(),
       instruction,
-      taskName,
+      taskId,
       timestamp.toIso8601String(),
       relativeTime.toString(),
       eventType,
@@ -101,7 +101,7 @@ class ExperimentLogger {
     }
   }
 
-  void startTask() {
+  void startExperiment() {
     _stepEvents.clear();
     _sessionStartTime = DateTime.now();
     // _sessionId = sessionId;
@@ -111,7 +111,7 @@ class ExperimentLogger {
   void logOtherEvent(
     int blockNumber,
     String instruction,
-    String taskName,
+    String taskId,
     String eventType,
   ) {
     final now = DateTime.now();
@@ -119,7 +119,7 @@ class ExperimentLogger {
     final event = OtherEvent(
       blockNumber: blockNumber,
       instruction: instruction,
-      taskName: taskName,
+      taskId: taskId,
       timestamp: now,
       relativeTime: relative,
       eventType: eventType,
@@ -131,7 +131,7 @@ class ExperimentLogger {
   void logStepStart(
     int blockNumber,
     String instruction,
-    String taskName,
+    String taskId,
     int duration,
   ) {
     final now = DateTime.now();
@@ -139,7 +139,7 @@ class ExperimentLogger {
     final event = StepEvent(
       blockNumber: blockNumber,
       instruction: instruction,
-      taskName: taskName,
+      taskId: taskId,
       duration: duration,
       startTime: now,
       relativeStartTime: relative,
@@ -164,8 +164,8 @@ class ExperimentLogger {
     if (_stepEvents.isNotEmpty) _stepEvents.removeLast();
   }
 
-  Future<void> finalizeSession() async {
-    print("Finalizing session");
+  Future<void> finalizeExperiment() async {
+    print("Finalizing experiment");
     if (_stepEvents.isEmpty) return;
 
     final rows = <List<String>>[];
@@ -197,27 +197,6 @@ class ExperimentLogger {
 
   String get csvPath => _stepsCsvFile.path;
   File get csvFile => _stepsCsvFile;
-
-  // Future<String> getSessionSummary() async {
-  //   if (_events.isEmpty) return 'No data recorded';
-
-  //   final buffer = StringBuffer();
-  //   buffer.writeln('Session started: $_sessionStartTime');
-  //   buffer.writeln('Steps recorded: ${_events.length}\n');
-
-  //   for (var i = 0; i < _events.length; i++) {
-  //     final e = _events[i];
-  //     buffer.writeln('Step ${i + 1} [${e.blockNumber}]: ${e.taskName}');
-  //     buffer.writeln('  Description: ${e.instruction}');
-  //     buffer.writeln('  Duration: ${e.duration}s');
-  //     buffer.writeln('  Started: ${e.relativeStartTime} ms relative');
-  //     if (e.relativeEndTime != null) {
-  //       buffer.writeln('  Ended: ${e.relativeEndTime} ms relative');
-  //     }
-  //     buffer.writeln();
-  //   }
-  //   return buffer.toString();
-  // }
 
   /// Get all log files in the documents directory
   static Future<List<File>> getAllLogFiles() async {
