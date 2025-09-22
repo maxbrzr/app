@@ -8,11 +8,11 @@ import 'package:open_wearable/apps/chew_side_detection/model/config.dart';
 import 'logger.dart';
 
 enum ExperimentState {
-  notStarted,
+  experimentNotStarted,
   configuringSensors,
-  waitingToStart,
-  running,
-  stepComplete,
+  taskWaiting,
+  taskRunning,
+  taskComplete,
   experimentComplete,
 }
 
@@ -28,7 +28,7 @@ class ExperimentController with ChangeNotifier {
   int _currentBlockIndex = 0;
   int _currentBlockTaskIndex = 0;
   int _currentTaskIndex = 0;
-  ExperimentState _state = ExperimentState.notStarted;
+  ExperimentState _state = ExperimentState.experimentNotStarted;
   DateTime? _sessionStartTime;
   Timer? _progressTimer;
   int _elapsedSeconds = 0;
@@ -76,8 +76,8 @@ class ExperimentController with ChangeNotifier {
   double get progress {
     // No current task or experiment hasn't started yet
     if (currentTask == null ||
-        _state == ExperimentState.notStarted ||
-        _state == ExperimentState.waitingToStart) {
+        _state == ExperimentState.experimentNotStarted ||
+        _state == ExperimentState.taskWaiting) {
       return 0.0;
     }
 
@@ -95,7 +95,7 @@ class ExperimentController with ChangeNotifier {
 
   /// Start the experiment session
   Future<void> startExperiment() async {
-    if (_state != ExperimentState.notStarted) return;
+    if (_state != ExperimentState.experimentNotStarted) return;
 
     try {
       _state = ExperimentState.configuringSensors;
@@ -120,7 +120,7 @@ class ExperimentController with ChangeNotifier {
 
       _prepareTask();
     } catch (e) {
-      _state = ExperimentState.notStarted;
+      _state = ExperimentState.experimentNotStarted;
       notifyListeners();
       rethrow;
     }
@@ -129,7 +129,7 @@ class ExperimentController with ChangeNotifier {
   /// Prepare the current step (without starting the timer)
   void _prepareTask() {
     _elapsedSeconds = 0;
-    _state = ExperimentState.waitingToStart;
+    _state = ExperimentState.taskWaiting;
     notifyListeners();
   }
 
@@ -153,12 +153,12 @@ class ExperimentController with ChangeNotifier {
 
   /// Start the timer for the current step (called manually by user)
   void startTaskTimer() {
-    if (_state != ExperimentState.waitingToStart) return;
+    if (_state != ExperimentState.taskWaiting) return;
     // If there's no task, do nothing
     final task = currentTask;
     if (task == null) return;
 
-    _state = ExperimentState.running;
+    _state = ExperimentState.taskRunning;
 
     // Log step start
     logger.logStepStart(
@@ -188,7 +188,7 @@ class ExperimentController with ChangeNotifier {
 
     logger.logTaskEnd();
 
-    _state = ExperimentState.stepComplete;
+    _state = ExperimentState.taskComplete;
     notifyListeners();
   }
 
@@ -222,8 +222,8 @@ class ExperimentController with ChangeNotifier {
 
   /// Reset the current step timer back to 0
   void resetCurrentStepTimer() {
-    if (_state == ExperimentState.running ||
-        _state == ExperimentState.stepComplete) {
+    if (_state == ExperimentState.taskRunning ||
+        _state == ExperimentState.taskComplete) {
       _progressTimer?.cancel();
       _progressTimer = null;
       _elapsedSeconds = 0;
@@ -231,7 +231,7 @@ class ExperimentController with ChangeNotifier {
       logger.discardLastStep();
 
       // Return to waiting state
-      _state = ExperimentState.waitingToStart;
+      _state = ExperimentState.taskWaiting;
       notifyListeners();
     }
   }
@@ -252,7 +252,7 @@ class ExperimentController with ChangeNotifier {
       await logger.finalizeSession();
     }
 
-    _state = ExperimentState.notStarted;
+    _state = ExperimentState.experimentNotStarted;
     _currentTaskIndex = 0;
     _currentBlockIndex = 0;
     _currentBlockTaskIndex = 0;

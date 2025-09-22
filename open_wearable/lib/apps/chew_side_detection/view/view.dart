@@ -18,7 +18,7 @@ class ExperimentView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (controller.state == ExperimentState.notStarted) ...[
+            if (controller.state == ExperimentState.experimentNotStarted) ...[
               _buildSensorConfigs(context, controller),
               _buildStepsList(context, controller),
             ] else ...[
@@ -325,7 +325,7 @@ class ExperimentView extends StatelessWidget {
       //       ),
       //     ),
       //   );
-      case ExperimentState.notStarted:
+      case ExperimentState.experimentNotStarted:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -368,8 +368,7 @@ class ExperimentView extends StatelessWidget {
           ),
         );
 
-      case ExperimentState.waitingToStart:
-        print(!controller.hasCurrentStepTimer);
+      case ExperimentState.taskWaiting:
         if (!controller.hasCurrentStepTimer) {
           return SizedBox(
             width: double.infinity,
@@ -400,7 +399,7 @@ class ExperimentView extends StatelessWidget {
           ),
         );
 
-      case ExperimentState.running:
+      case ExperimentState.taskRunning:
         return Column(
           children: [
             Row(
@@ -486,7 +485,7 @@ class ExperimentView extends StatelessWidget {
           ],
         );
 
-      case ExperimentState.stepComplete:
+      case ExperimentState.taskComplete:
         if (!controller.hasCurrentStepTimer) {
           return SizedBox(
             width: double.infinity,
