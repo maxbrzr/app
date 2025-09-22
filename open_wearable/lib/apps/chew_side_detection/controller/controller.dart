@@ -92,8 +92,6 @@ class ExperimentController with ChangeNotifier {
 
   TextEditingController get expIdController => _expIdController;
 
-  bool get hasCurrentStepTimer => currentBlock.tasks.isNotEmpty;
-
   /// Start the experiment session
   Future<void> startExperiment() async {
     if (_state != ExperimentState.experimentNotStarted) return;

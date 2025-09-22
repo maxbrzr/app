@@ -24,8 +24,6 @@ class ExperimentView extends StatelessWidget {
             ] else ...[
               _buildStepProgressIndicator(controller),
               const SizedBox(height: 24),
-
-              /// Full-width Card with block + task instructions
               SizedBox(
                 width: double.infinity,
                 child: Card(
@@ -38,7 +36,6 @@ class ExperimentView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        /// Block instruction title
                         Text(
                           "Block Instruction",
                           style:
@@ -47,16 +44,12 @@ class ExperimentView extends StatelessWidget {
                                   ),
                         ),
                         const SizedBox(height: 8),
-
-                        /// Block instruction content (smaller than before)
                         Text(
                           controller.currentBlock.instruction,
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                         const SizedBox(height: 20),
-
                         if (controller.currentBlock.tasks.isNotEmpty) ...[
-                          /// Task instruction title
                           Text(
                             "Task Instruction",
                             style: Theme.of(context)
@@ -67,8 +60,6 @@ class ExperimentView extends StatelessWidget {
                                 ),
                           ),
                           const SizedBox(height: 8),
-
-                          /// Task instruction content (smaller than before)
                           Text(
                             controller.currentTask!.name,
                             style: Theme.of(context).textTheme.bodyLarge,
@@ -79,8 +70,6 @@ class ExperimentView extends StatelessWidget {
                   ),
                 ),
               ),
-
-              /// Timer outside the card
               if (controller.currentBlock.tasks.isNotEmpty) ...[
                 const SizedBox(height: 20),
                 _buildTimerDisplay(context, controller) ?? Container(),
@@ -369,7 +358,7 @@ class ExperimentView extends StatelessWidget {
         );
 
       case ExperimentState.taskWaiting:
-        if (!controller.hasCurrentStepTimer) {
+        if (controller.currentTask != null) {
           return SizedBox(
             width: double.infinity,
             child: PlatformElevatedButton(
@@ -499,7 +488,7 @@ class ExperimentView extends StatelessWidget {
         );
 
       case ExperimentState.taskComplete:
-        if (!controller.hasCurrentStepTimer) {
+        if (controller.currentTask != null) {
           return SizedBox(
             width: double.infinity,
             child: PlatformElevatedButton(
