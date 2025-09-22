@@ -2,7 +2,7 @@ experiment_name: "Chewing Side Detection Experiment"
 
 global_sensor_configs:
   - sensor: pressure
-    sample_rate: 200
+    sample_rate: 100
   - sensor: microphone
     sample_rate: 48000
   - sensor: ppg
@@ -10,9 +10,9 @@ global_sensor_configs:
   - sensor: bone_conduction
     sample_rate: 1600
   - sensor: imu
-    sample_rate: 800
+    sample_rate: 100
   - sensor: temperature
-    sample_rate: 200
+    sample_rate: 8
 
 blocks:
   - block_number: 0
