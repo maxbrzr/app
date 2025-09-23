@@ -305,9 +305,10 @@ class ExperimentController with ChangeNotifier {
           await manager.deactivateSensors();
           _sensorsConfigured = false;
         }(),
-      () async {
-        await logger.stopAndWriteLogging();
-      }(),
+      if (_sensorsConfigured)
+        () async {
+          await logger.stopAndWriteLogging();
+        }(),
     ]);
 
     _state = ExperimentState.experimentNotStarted;
