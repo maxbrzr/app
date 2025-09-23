@@ -143,6 +143,15 @@ class ExperimentController with ChangeNotifier {
     );
   }
 
+  void bitOffPiece() {
+    logger.logOtherEvent(
+      currentBlock.number,
+      currentBlock.instruction,
+      currentTask!.id,
+      "bitOffPiece",
+    );
+  }
+
   /// Start the timer for the current step (called manually by user)
   Future<void> startTaskTimer() async {
     if (_state != ExperimentState.taskWaiting) return;

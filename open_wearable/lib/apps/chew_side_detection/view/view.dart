@@ -346,6 +346,12 @@ class _ControlSection extends StatelessWidget {
               child: PlatformElevatedButton(
                 onPressed: controller.resetCurrentStepTimer,
                 child: const Text("Reset Task"),
+                material: (_, __) => MaterialElevatedButtonData(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white, // text color
+                  ),
+                ),
               ),
             ),
             gapL,
@@ -359,6 +365,12 @@ class _ControlSection extends StatelessWidget {
                       child: PlatformElevatedButton(
                         onPressed: controller.swallowed,
                         child: const Text("Swallowed"),
+                        material: (_, __) => MaterialElevatedButtonData(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white, // text color
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -371,6 +383,31 @@ class _ControlSection extends StatelessWidget {
                         child: const Text(
                           "New Piece of Food",
                           textAlign: TextAlign.center,
+                        ),
+                        material: (_, __) => MaterialElevatedButtonData(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.purple,
+                            foregroundColor: Colors.white, // text color
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 64,
+                      child: PlatformElevatedButton(
+                        onPressed: controller.bitOffPiece,
+                        child: const Text(
+                          "Bit Off Piece",
+                          textAlign: TextAlign.center,
+                        ),
+                        material: (_, __) => MaterialElevatedButtonData(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white, // text color
+                          ),
                         ),
                       ),
                     ),
@@ -386,6 +423,12 @@ class _ControlSection extends StatelessWidget {
           child: PlatformElevatedButton(
             onPressed: controller.reappliedWearables,
             child: const Text("Reapplied Wearables"),
+            material: (_, __) => MaterialElevatedButtonData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white, // text color
+              ),
+            ),
           ),
         );
 
@@ -400,6 +443,12 @@ class _ControlSection extends StatelessWidget {
               child: PlatformElevatedButton(
                 onPressed: controller.resetCurrentStepTimer,
                 child: const Text("Repeat Task"),
+                material: (_, __) => MaterialElevatedButtonData(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white, // text color
+                  ),
+                ),
               ),
             ),
           ],
