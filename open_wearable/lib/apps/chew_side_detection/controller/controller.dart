@@ -256,12 +256,18 @@ class ExperimentController with ChangeNotifier {
   }
 
   /// Reset the current step timer back to 0
-  void resetCurrentStepTimer() {
+  Future<void> resetCurrentStepTimer() async {
     if (_state == ExperimentState.taskRunning ||
         _state == ExperimentState.taskComplete) {
       _progressTimer?.cancel();
       _progressTimer = null;
       _elapsedSeconds = 0;
+
+      if (_sensorsConfigured) {
+        // subscription?.cancel();
+        await manager.deactivateSensors();
+        _sensorsConfigured = false;
+      }
 
       logger.discardLastStep();
 
