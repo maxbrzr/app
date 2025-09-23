@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:open_wearable/apps/chew_side_detection/controller/manager.dart';
@@ -12,6 +14,7 @@ enum ExperimentState {
   experimentNotStarted,
   configuringSensors,
   reapplyingWearables,
+  playSound,
   taskWaiting,
   taskRunning,
   taskComplete,
@@ -26,6 +29,7 @@ class ExperimentController with ChangeNotifier {
 
   // State
   final TextEditingController _expIdController = TextEditingController();
+  final _player = AudioPlayer();
   int _currentBlockIndex = 0;
   int _currentBlockTaskIndex = 0;
   int _currentTaskIndex = 0;
@@ -111,7 +115,8 @@ class ExperimentController with ChangeNotifier {
 
       logger.startLogging();
 
-      _prepareTask();
+      _state = ExperimentState.playSound;
+      notifyListeners();
     } catch (e) {
       _state = ExperimentState.experimentNotStarted;
       notifyListeners();
@@ -144,6 +149,36 @@ class ExperimentController with ChangeNotifier {
       currentTask!.id,
       "bitOffPiece",
     );
+  }
+
+  void playSound() async {
+    // Load both files in parallel
+    final results = await Future.wait([
+      rootBundle.load('lib/apps/chew_side_detection/assets/dirac.wav'),
+      rootBundle.load('lib/apps/chew_side_detection/assets/white_noise.wav'),
+    ]);
+
+    final dirac = results[0];
+    final noise = results[1];
+
+    // Play dirac first
+    await _player.play(BytesSource(dirac.buffer.asUint8List()));
+
+    // Wait until dirac finishes
+    await _player.onPlayerComplete.first;
+
+    // Then play noise
+    await _player.play(BytesSource(noise.buffer.asUint8List()));
+
+    // Wait until noise finishes
+    await _player.onPlayerComplete.first;
+
+    if (isLastBlock && isLastBlockStep) {
+      _state = ExperimentState.experimentComplete;
+      notifyListeners();
+    } else {
+      _prepareTask(); // normal case (start next task)
+    }
   }
 
   /// Start the timer for the current step (called manually by user)
@@ -223,7 +258,8 @@ class ExperimentController with ChangeNotifier {
     print("isLastBlockStep: $isLastBlockStep");
 
     if (isLastBlock && isLastBlockStep) {
-      stopExperiment();
+      _state = ExperimentState.playSound;
+      notifyListeners();
       return;
     }
 

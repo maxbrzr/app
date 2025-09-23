@@ -323,6 +323,21 @@ class _ControlSection extends StatelessWidget {
           ),
         );
 
+      case ExperimentState.playSound:
+        return SizedBox(
+          width: double.infinity,
+          child: PlatformElevatedButton(
+            onPressed: controller.playSound,
+            child: const Text("Play Sound"),
+            material: (_, __) => MaterialElevatedButtonData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white, // text color
+              ),
+            ),
+          ),
+        );
+
       case ExperimentState.taskWaiting:
         if (_isConsentBlock()) return _consentControls(context);
         // Task exists but not started → Start Timer
@@ -460,7 +475,7 @@ class _ControlSection extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: PlatformElevatedButton(
-                onPressed: controller.nextStep,
+                onPressed: controller.stopExperiment,
                 child: const Text("Finish Experiment"),
               ),
             ),
@@ -476,11 +491,7 @@ class _ControlSection extends StatelessWidget {
   }
 
   Widget _nextStepButton(BuildContext context) {
-    final label = controller.isLastBlock && controller.isLastBlockStep
-        ? "Finish Experiment"
-        : controller.isLastBlockStep
-            ? "Next Block"
-            : "Next Task";
+    final label = controller.isLastBlockStep ? "Next Block" : "Next Task";
     return SizedBox(
       width: double.infinity,
       child: PlatformElevatedButton(
@@ -520,11 +531,7 @@ class _ControlSection extends StatelessWidget {
   }
 
   Widget _consentControls(BuildContext context) {
-    final label = controller.isLastBlock && controller.isLastBlockStep
-        ? "Finish Experiment"
-        : controller.isLastBlockStep
-            ? "Next Block"
-            : "Continue";
+    final label = controller.isLastBlockStep ? "Next Block" : "Continue";
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
