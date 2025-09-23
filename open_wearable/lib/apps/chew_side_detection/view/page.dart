@@ -66,6 +66,7 @@ class _ExperimentPageState extends State<ExperimentPage> {
         _logger = ExperimentLogger();
 
         _manager = ExperimentManager(
+          logger: _logger!,
           expConfig: expConfig,
           leftWearable: widget.leftWearable,
           leftSensorCfgProvider: widget.leftConfigProvider,

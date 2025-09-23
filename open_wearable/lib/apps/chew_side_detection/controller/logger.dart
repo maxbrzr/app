@@ -68,17 +68,44 @@ class OtherEvent {
   }
 }
 
+class SyncEvent {
+  final int deviceTimestamp;
+  final DateTime phoneTimestamp;
+  final int relativePhoneTime;
+  SyncEvent({
+    required this.deviceTimestamp,
+    required this.phoneTimestamp,
+    required this.relativePhoneTime,
+  });
+
+  List<String> toCsvRow() {
+    return [
+      deviceTimestamp.toString(),
+      phoneTimestamp.toIso8601String(),
+      relativePhoneTime.toString(),
+    ];
+  }
+}
+
 /// Logger for ExperimentManager
 class ExperimentLogger {
   static const String _stepsCsvHeader =
       'Block,Instruction,Task,DurationS,StartTime,EndTime,RelativeStartMS,RelativeEndMS';
   static const String _otherCsvHeader =
       'Block,Instruction,Task,Time,RelativeTimeMS,EventType';
+  static const String _syncCsvHeader =
+      "DeviceTimestamp,PhoneTimestamp,RelativePhoneTimeMS";
+
   late File _stepsCsvFile;
   late File _otherCsvFile;
+  late File _syncLeftCsvFile;
+  late File _syncRightCsvFile;
+
   late DateTime _sessionStartTime;
   final List<StepEvent> _stepEvents = [];
   final List<OtherEvent> _otherEvents = [];
+  final List<SyncEvent> _syncLeftEvents = [];
+  final List<SyncEvent> _syncRightEvents = [];
 
   File get csvFile => _stepsCsvFile;
 
@@ -88,6 +115,8 @@ class ExperimentLogger {
 
     _stepsCsvFile = File('${dir.path}/${prefix}_steps_log.csv');
     _otherCsvFile = File('${dir.path}/${prefix}_other_log.csv');
+    _syncLeftCsvFile = File('${dir.path}/${prefix}_sync_left_log.csv');
+    _syncRightCsvFile = File('${dir.path}/${prefix}_sync_right_log.csv');
 
     await Future.wait([
       () async {
@@ -98,6 +127,16 @@ class ExperimentLogger {
       () async {
         if (!await _otherCsvFile.exists()) {
           await _otherCsvFile.writeAsString('$_otherCsvHeader\n');
+        }
+      }(),
+      () async {
+        if (!await _syncLeftCsvFile.exists()) {
+          await _syncLeftCsvFile.writeAsString('$_syncCsvHeader\n');
+        }
+      }(),
+      () async {
+        if (!await _syncRightCsvFile.exists()) {
+          await _syncRightCsvFile.writeAsString('$_syncCsvHeader\n');
         }
       }(),
     ]);
@@ -126,6 +165,30 @@ class ExperimentLogger {
     );
     print(event.toCsvRow());
     _otherEvents.add(event);
+  }
+
+  void logSyncLeftEvent(int deviceTimestamp) {
+    final now = DateTime.now();
+    final relative = now.difference(_sessionStartTime).inMilliseconds;
+    final event = SyncEvent(
+      deviceTimestamp: deviceTimestamp,
+      phoneTimestamp: now,
+      relativePhoneTime: relative,
+    );
+    print(event.toCsvRow());
+    _syncLeftEvents.add(event);
+  }
+
+  void logSyncRightEvent(int deviceTimestamp) {
+    final now = DateTime.now();
+    final relative = now.difference(_sessionStartTime).inMilliseconds;
+    final event = SyncEvent(
+      deviceTimestamp: deviceTimestamp,
+      phoneTimestamp: now,
+      relativePhoneTime: relative,
+    );
+    print(event.toCsvRow());
+    _syncRightEvents.add(event);
   }
 
   void logTaskStart(
@@ -175,17 +238,33 @@ class ExperimentLogger {
       otherRows.add(e.toCsvRow());
     }
 
+    final syncLeftRows = <List<String>>[];
+    for (final e in _syncLeftEvents) {
+      syncLeftRows.add(e.toCsvRow());
+    }
+
+    final syncRightRows = <List<String>>[];
+    for (final e in _syncRightEvents) {
+      syncRightRows.add(e.toCsvRow());
+    }
+
     final converter = ListToCsvConverter();
     final stepsCsvData = converter.convert(stepsRows);
     final otherCsvData = converter.convert(otherRows);
+    final syncLeftCsvData = converter.convert(syncLeftRows);
+    final syncRightCsvData = converter.convert(syncRightRows);
 
     await Future.wait([
-      _stepsCsvFile.writeAsString(stepsCsvData, mode: FileMode.append),
-      _otherCsvFile.writeAsString(otherCsvData, mode: FileMode.append),
+      _stepsCsvFile.writeAsString(stepsCsvData, mode: FileMode.write),
+      _otherCsvFile.writeAsString(otherCsvData, mode: FileMode.write),
+      _syncLeftCsvFile.writeAsString(syncLeftCsvData, mode: FileMode.write),
+      _syncRightCsvFile.writeAsString(syncRightCsvData, mode: FileMode.write),
     ]);
 
     _stepEvents.clear();
     _otherEvents.clear();
+    _syncLeftEvents.clear();
+    _syncRightEvents.clear();
   }
 
   /// Get all log files in the documents directory

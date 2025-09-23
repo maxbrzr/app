@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/chew_side_detection/controller/logger.dart';
 import 'package:open_wearable/apps/chew_side_detection/model/config.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
 class ExperimentManager {
+  final ExperimentLogger logger;
   final ExperimentConfig expConfig;
   final Wearable leftWearable;
   final Wearable rightWearable;
@@ -16,7 +18,11 @@ class ExperimentManager {
   late Map<String, SensorConfiguration> _leftSensorIdToCfgMap;
   late Map<String, SensorConfiguration> _rightSensorIdToCfgMap;
 
+  StreamSubscription<SensorValue>? _leftSubscription;
+  StreamSubscription<SensorValue>? _rightSubscription;
+
   ExperimentManager({
+    required this.logger,
     required this.expConfig,
     required this.leftWearable,
     required this.leftSensorCfgProvider,
@@ -122,13 +128,13 @@ class ExperimentManager {
             RecordSensorConfigOption(),
           );
         }
-        // if (sensorId == "temperature" &&
-        //     cfg.availableOptions.contains(StreamSensorConfigOption())) {
-        //   cfgProvider.addSensorConfigurationOption(
-        //     cfg,
-        //     StreamSensorConfigOption(),
-        //   );
-        // }
+        if (sensorId == "Skin Temperature Sensor" &&
+            cfg.availableOptions.contains(StreamSensorConfigOption())) {
+          cfgProvider.addSensorConfigurationOption(
+            cfg,
+            StreamSensorConfigOption(),
+          );
+        }
       }
     }
   }
@@ -149,11 +155,13 @@ class ExperimentManager {
       )> configureSensors() async {
     if (leftWearable is! SensorConfigurationManager) {
       throw Exception(
-          "The left wearable does not support sensor configuration");
+        "The left wearable does not support sensor configuration",
+      );
     }
     if (rightWearable is! SensorConfigurationManager) {
       throw Exception(
-          "The right wearable does not support sensor configuration");
+        "The right wearable does not support sensor configuration",
+      );
     }
 
     // Configure each sensor according to the global configuration
@@ -175,6 +183,38 @@ class ExperimentManager {
         _rightSensorIdToCfgMap,
         sensorConfig,
       );
+
+      if (leftWearable is SensorManager) {
+        List<Sensor> sensors = (leftWearable as SensorManager).sensors;
+        for (var sensor in sensors) {
+          if (sensor.sensorName == "OPTICAL_TEMPERATURE_SENSOR") {
+            _leftSubscription = sensor.sensorStream.listen(
+              (SensorValue value) => logger.logSyncLeftEvent(value.timestamp),
+              onDone: () async => await _leftSubscription?.cancel(),
+              onError: (error) async {
+                print('Right streaming error: $error');
+                await _leftSubscription?.cancel();
+              },
+            );
+          }
+        }
+      }
+
+      if (rightWearable is SensorManager) {
+        List<Sensor> sensors = (rightWearable as SensorManager).sensors;
+        for (var sensor in sensors) {
+          if (sensor.sensorName == "OPTICAL_TEMPERATURE_SENSOR") {
+            _rightSubscription = sensor.sensorStream.listen(
+              (SensorValue value) => logger.logSyncRightEvent(value.timestamp),
+              onDone: () async => await _rightSubscription?.cancel(),
+              onError: (error) async {
+                print('Right streaming error: $error');
+                await _rightSubscription?.cancel();
+              },
+            );
+          }
+        }
+      }
     }
 
     var leftSelectedCfgs = leftSensorCfgProvider.getSelectedConfigurations();
@@ -224,6 +264,9 @@ class ExperimentManager {
       return;
     }
 
+    await _leftSubscription?.cancel();
+    await _rightSubscription?.cancel();
+
     // Deactivate each configured sensor by removing their options
     for (var sensorConfig in expConfig.globalSensorConfigs) {
       final sensorName = sensorConfig.sensor.toLowerCase();
@@ -236,6 +279,10 @@ class ExperimentManager {
           leftSensorCfgProvider.removeSensorConfigurationOption(
             cfg,
             RecordSensorConfigOption(),
+          );
+          leftSensorCfgProvider.removeSensorConfigurationOption(
+            cfg,
+            StreamSensorConfigOption(),
           );
           var value = leftSensorCfgProvider.getSelectedConfigurationValue(cfg);
           if (value != null) {
@@ -253,6 +300,10 @@ class ExperimentManager {
           rightSensorCfgProvider.removeSensorConfigurationOption(
             cfg,
             RecordSensorConfigOption(),
+          );
+          rightSensorCfgProvider.removeSensorConfigurationOption(
+            cfg,
+            StreamSensorConfigOption(),
           );
           var value = rightSensorCfgProvider.getSelectedConfigurationValue(cfg);
           if (value != null) {

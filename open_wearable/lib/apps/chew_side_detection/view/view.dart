@@ -479,12 +479,6 @@ class _ControlSection extends StatelessWidget {
                 child: const Text("Finish Experiment"),
               ),
             ),
-            gapM,
-            Text(
-              'Experiment completed! You can finish to save data or restart.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
           ],
         );
     }
