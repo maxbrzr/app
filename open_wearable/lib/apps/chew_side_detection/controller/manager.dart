@@ -50,21 +50,20 @@ class ExperimentManager {
   }
 
   Future<void> setSensorLogFilePrefix(String prefix) async {
-    if (leftWearable is EdgeRecorderManager) {
-      await (leftWearable as EdgeRecorderManager).setFilePrefix("left_$prefix");
-    } else {
+    if (leftWearable is! EdgeRecorderManager) {
       throw Exception(
         "The left wearable does not support setting a log file prefix",
       );
     }
-    if (rightWearable is EdgeRecorderManager) {
-      await (rightWearable as EdgeRecorderManager)
-          .setFilePrefix("right_$prefix");
-    } else {
+    if (rightWearable is! EdgeRecorderManager) {
       throw Exception(
         "The right wearable does not support setting a log file prefix",
       );
     }
+    await Future.wait([
+      (leftWearable as EdgeRecorderManager).setFilePrefix("left_$prefix"),
+      (rightWearable as EdgeRecorderManager).setFilePrefix("right_$prefix"),
+    ]);
   }
 
   SensorFrequencyConfigurationValue? _findBestMatch(

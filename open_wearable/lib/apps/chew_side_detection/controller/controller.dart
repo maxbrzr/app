@@ -22,15 +22,14 @@ class ExperimentController with ChangeNotifier {
   final ExperimentConfig expConfig;
   final ExperimentManager manager;
   final ExperimentLogger logger;
-  final TextEditingController _expIdController = TextEditingController();
   late String experimentId;
 
   // State
+  final TextEditingController _expIdController = TextEditingController();
   int _currentBlockIndex = 0;
   int _currentBlockTaskIndex = 0;
   int _currentTaskIndex = 0;
   ExperimentState _state = ExperimentState.experimentNotStarted;
-  DateTime? _sessionStartTime;
   Timer? _progressTimer;
   int _elapsedSeconds = 0;
   bool _sensorsConfigured = false;
@@ -41,41 +40,35 @@ class ExperimentController with ChangeNotifier {
     required this.logger,
   });
 
-  // Getters
+  // Indices
   int get currentBlockIndex => _currentBlockIndex;
   int get currentBlockTaskIndex => _currentBlockTaskIndex;
-  int get currentTaskIndex => _currentTaskIndex;
 
+  // Objects
   ExperimentBlock get currentBlock => expConfig.blocks[_currentBlockIndex];
-
   Task? get currentTask {
     final block = expConfig.blocks[_currentBlockIndex];
     if (block.tasks.isEmpty) return null;
     return block.tasks[_currentBlockTaskIndex];
   }
 
-  int get totalNumTasks =>
-      expConfig.blocks.fold(0, (sum, block) => sum + block.tasks.length);
-
+  // Counts
   int get totalNumBlocks => expConfig.blocks.fold(0, (sum, block) => sum + 1);
+  int get totalNumBlockTasks => currentBlock.tasks.length;
 
-  int get totalNumBlockTasks =>
-      expConfig.blocks[_currentBlockIndex].tasks.length;
-
+  // Last
   bool get isLastBlock => _currentBlockIndex == expConfig.blocks.length - 1;
-
   bool get isLastBlockStep {
     if (currentBlock.tasks.isEmpty) return true;
-    return currentBlockTaskIndex == currentBlock.tasks.length - 1;
+    return _currentBlockTaskIndex == currentBlock.tasks.length - 1;
   }
 
+  // State
   ExperimentState get state => _state;
 
+  // Timer
   int get elapsedSeconds => _elapsedSeconds;
-  DateTime? get sessionStartTime => _sessionStartTime;
-
   double get progress {
-    // No current task or experiment hasn't started yet
     if (currentTask == null ||
         _state == ExperimentState.experimentNotStarted ||
         _state == ExperimentState.taskWaiting) {
@@ -90,6 +83,7 @@ class ExperimentController with ChangeNotifier {
     return _elapsedSeconds / duration;
   }
 
+  // Experiment ID
   TextEditingController get expIdController => _expIdController;
 
   /// Start the experiment session
@@ -103,19 +97,19 @@ class ExperimentController with ChangeNotifier {
       // Get experiment ID from text field
       experimentId = _expIdController.text.trim();
 
-      // Initialize the logger with experiment ID
-      await logger.initialize(experimentId);
-
       // Set sensor log file prefix
-      // await manager.setSensorLogFilePrefix(
-      //   "${experimentId}_${DateFormat('yyMMdd_HH_mm').format(DateTime.now())}_",
-      // );
+      await manager.setSensorLogFilePrefix(
+        "${experimentId}_${DateFormat('yyMMdd_HH_mm').format(DateTime.now())}_",
+      );
 
-      // await manager.configureSensors();
-      // _sensorsConfigured = true;
+      await Future.wait([
+        logger.initialize(experimentId),
+        manager.configureSensors(),
+      ]);
 
-      logger.startExperiment();
-      _sessionStartTime = DateTime.now();
+      _sensorsConfigured = true;
+
+      logger.startLogging();
 
       _prepareTask();
     } catch (e) {
@@ -161,18 +155,8 @@ class ExperimentController with ChangeNotifier {
 
     _state = ExperimentState.taskRunning;
 
-    //Set sensor log file prefix
-    final dateStamp = DateFormat('yyMMdd_HH_mm').format(DateTime.now());
-
-    await manager.setSensorLogFilePrefix(
-      "${experimentId}_${currentBlock.number}_${currentTask!.id}_${dateStamp}_",
-    );
-
-    await manager.configureSensors();
-    _sensorsConfigured = true;
-
     // Log step start
-    logger.logStepStart(
+    logger.logTaskStart(
       currentBlock.number,
       currentBlock.instruction,
       task.id,
@@ -198,12 +182,6 @@ class ExperimentController with ChangeNotifier {
     _progressTimer = null;
 
     logger.logTaskEnd();
-
-    if (_sensorsConfigured) {
-      // subscription?.cancel();
-      await manager.deactivateSensors();
-      _sensorsConfigured = false;
-    }
 
     _state = ExperimentState.taskComplete;
     notifyListeners();
@@ -272,13 +250,7 @@ class ExperimentController with ChangeNotifier {
       _progressTimer = null;
       _elapsedSeconds = 0;
 
-      if (_sensorsConfigured) {
-        // subscription?.cancel();
-        await manager.deactivateSensors();
-        _sensorsConfigured = false;
-      }
-
-      logger.discardLastStep();
+      logger.discardLastTask();
 
       // Return to waiting state
       _state = ExperimentState.taskWaiting;
@@ -291,23 +263,23 @@ class ExperimentController with ChangeNotifier {
     _progressTimer?.cancel();
     _progressTimer = null;
 
-    // if (_sensorsConfigured) {
-    //   // subscription?.cancel();
-    //   await manager.deactivateSensors();
-    //   _sensorsConfigured = false;
-    // }
-
-    // Finalize the session logging if we have data
-    if (_sessionStartTime != null) {
-      await logger.finalizeExperiment();
-    }
+    await Future.wait([
+      if (_sensorsConfigured)
+        () async {
+          await manager.deactivateSensors();
+          _sensorsConfigured = false;
+        }(),
+      () async {
+        await logger.stopAndWriteLogging();
+      }(),
+    ]);
 
     _state = ExperimentState.experimentNotStarted;
     _currentTaskIndex = 0;
     _currentBlockIndex = 0;
     _currentBlockTaskIndex = 0;
     _elapsedSeconds = 0;
-    _sessionStartTime = null;
+
     notifyListeners();
   }
 

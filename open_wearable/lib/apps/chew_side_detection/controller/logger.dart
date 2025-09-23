@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:math';
 import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:intl/intl.dart';
 
 /// Represents a single step event
 class StepEvent {
@@ -75,37 +74,38 @@ class ExperimentLogger {
       'Block,Instruction,Task,DurationS,StartTime,EndTime,RelativeStartMS,RelativeEndMS';
   static const String _otherCsvHeader =
       'Block,Instruction,Task,Time,RelativeTimeMS,EventType';
-
   late File _stepsCsvFile;
   late File _otherCsvFile;
-
   late DateTime _sessionStartTime;
-  // late String _sessionId;
-  // late String _sensorConfig;
-
   final List<StepEvent> _stepEvents = [];
   final List<OtherEvent> _otherEvents = [];
 
-  Future<void> initialize([String prefix = 'experiment']) async {
+  File get csvFile => _stepsCsvFile;
+
+  Future<void> initialize(String prefix) async {
     print("prefix = $prefix");
     final dir = await getApplicationDocumentsDirectory();
 
     _stepsCsvFile = File('${dir.path}/${prefix}_steps_log.csv');
-    if (!await _stepsCsvFile.exists()) {
-      await _stepsCsvFile.writeAsString('$_stepsCsvHeader\n');
-    }
-
     _otherCsvFile = File('${dir.path}/${prefix}_other_log.csv');
-    if (!await _otherCsvFile.exists()) {
-      await _otherCsvFile.writeAsString('$_otherCsvHeader\n');
-    }
+
+    await Future.wait([
+      () async {
+        if (!await _stepsCsvFile.exists()) {
+          await _stepsCsvFile.writeAsString('$_stepsCsvHeader\n');
+        }
+      }(),
+      () async {
+        if (!await _otherCsvFile.exists()) {
+          await _otherCsvFile.writeAsString('$_otherCsvHeader\n');
+        }
+      }(),
+    ]);
   }
 
-  void startExperiment() {
+  void startLogging() {
     _stepEvents.clear();
     _sessionStartTime = DateTime.now();
-    // _sessionId = sessionId;
-    // _sensorConfig = sensorConfig;
   }
 
   void logOtherEvent(
@@ -128,7 +128,7 @@ class ExperimentLogger {
     _otherEvents.add(event);
   }
 
-  void logStepStart(
+  void logTaskStart(
     int blockNumber,
     String instruction,
     String taskId,
@@ -150,53 +150,43 @@ class ExperimentLogger {
 
   void logTaskEnd() {
     if (_stepEvents.isEmpty) return;
-
     final now = DateTime.now();
     final relative = now.difference(_sessionStartTime).inMilliseconds;
-
     final event = _stepEvents.last;
     event.endTime = now;
     event.relativeEndTime = relative;
     print(event.toCsvRow());
   }
 
-  void discardLastStep() {
+  void discardLastTask() {
     if (_stepEvents.isNotEmpty) _stepEvents.removeLast();
   }
 
-  Future<void> finalizeExperiment() async {
+  Future<void> stopAndWriteLogging() async {
     print("Finalizing experiment");
-    if (_stepEvents.isEmpty) return;
 
-    final rows = <List<String>>[];
+    final stepsRows = <List<String>>[];
     for (final e in _stepEvents) {
-      rows.add(e.toCsvRow());
+      stepsRows.add(e.toCsvRow());
     }
-
-    final converter = ListToCsvConverter();
-    final csvData = converter.convert(rows);
-
-    await _stepsCsvFile.writeAsString(csvData, mode: FileMode.append);
-
-    _stepEvents.clear();
-
-    if (_otherEvents.isEmpty) return;
 
     final otherRows = <List<String>>[];
     for (final e in _otherEvents) {
       otherRows.add(e.toCsvRow());
     }
 
-    final otherConverter = ListToCsvConverter();
-    final otherCsvData = otherConverter.convert(otherRows);
+    final converter = ListToCsvConverter();
+    final stepsCsvData = converter.convert(stepsRows);
+    final otherCsvData = converter.convert(otherRows);
 
-    await _otherCsvFile.writeAsString(otherCsvData, mode: FileMode.append);
+    await Future.wait([
+      _stepsCsvFile.writeAsString(stepsCsvData, mode: FileMode.append),
+      _otherCsvFile.writeAsString(otherCsvData, mode: FileMode.append),
+    ]);
 
+    _stepEvents.clear();
     _otherEvents.clear();
   }
-
-  String get csvPath => _stepsCsvFile.path;
-  File get csvFile => _stepsCsvFile;
 
   /// Get all log files in the documents directory
   static Future<List<File>> getAllLogFiles() async {
@@ -216,24 +206,6 @@ class ExperimentLogger {
     // Sort by modification date, newest first
     files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
     return files;
-  }
-
-  /// Archive the current log file by renaming it with a timestamp prefix, similar to log rotation
-  Future<File> archiveLogFile() async {
-    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-
-    final path = _stepsCsvFile.path;
-    final lastSeparator = path.lastIndexOf(Platform.pathSeparator);
-    var newFileName = '${timestamp}_${path.substring(lastSeparator + 1)}';
-    var newPath = path.substring(0, lastSeparator + 1) + newFileName;
-
-    if (await _stepsCsvFile.exists()) {
-      // rename old file and init new file
-      await _stepsCsvFile.rename(newPath);
-      await _stepsCsvFile.writeAsString('$_stepsCsvHeader\n');
-    }
-
-    return File(newPath);
   }
 
   /// Delete a log file
