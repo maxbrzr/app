@@ -323,12 +323,27 @@ class _ControlSection extends StatelessWidget {
           ),
         );
 
-      case ExperimentState.playSound:
+      case ExperimentState.soundWaiting:
         return SizedBox(
           width: double.infinity,
           child: PlatformElevatedButton(
-            onPressed: controller.playSound,
-            child: const Text("Play Sound"),
+            onPressed: controller.startSound,
+            child: const Text("Start Sound"),
+            material: (_, __) => MaterialElevatedButtonData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white, // text color
+              ),
+            ),
+          ),
+        );
+
+      case ExperimentState.soundRunning:
+        return SizedBox(
+          width: double.infinity,
+          child: PlatformElevatedButton(
+            onPressed: controller.endSound,
+            child: const Text("Sound Complete"),
             material: (_, __) => MaterialElevatedButtonData(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.teal,

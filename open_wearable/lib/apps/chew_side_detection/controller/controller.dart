@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/services.dart';
+// import 'package:audioplayers/audioplayers.dart';
+// import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:open_wearable/apps/chew_side_detection/controller/manager.dart';
@@ -14,7 +14,8 @@ enum ExperimentState {
   experimentNotStarted,
   configuringSensors,
   reapplyingWearables,
-  playSound,
+  soundWaiting,
+  soundRunning,
   taskWaiting,
   taskRunning,
   taskComplete,
@@ -29,7 +30,6 @@ class ExperimentController with ChangeNotifier {
 
   // State
   final TextEditingController _expIdController = TextEditingController();
-  final _player = AudioPlayer();
   int _currentBlockIndex = 0;
   int _currentBlockTaskIndex = 0;
   int _currentTaskIndex = 0;
@@ -101,27 +101,57 @@ class ExperimentController with ChangeNotifier {
       // Get experiment ID from text field
       experimentId = _expIdController.text.trim();
 
-      // Set sensor log file prefix
-      await manager.setSensorLogFilePrefix(
-        "${experimentId}_${DateFormat('yyMMdd_HH_mm').format(DateTime.now())}_",
-      );
-
-      await Future.wait([
-        logger.initialize(experimentId),
-        manager.configureSensors(),
-      ]);
-
-      _sensorsConfigured = true;
-
+      await logger.initialize(experimentId);
       logger.startLogging();
 
-      _state = ExperimentState.playSound;
+      _state = ExperimentState.soundWaiting;
       notifyListeners();
     } catch (e) {
       _state = ExperimentState.experimentNotStarted;
       notifyListeners();
       rethrow;
     }
+  }
+
+  Future<void> _startSensors(String id) async {
+    // Set sensor log file prefix
+    // int number = currentBlock.number;
+    // String taskId = currentTask!.id;
+
+    await manager.setSensorLogFilePrefix(
+      "${experimentId}_${id}_${DateFormat('yyMMdd_HH_mm').format(DateTime.now())}_",
+    );
+    await manager.configureSensors();
+    // await Future.delayed(const Duration(seconds: 2));
+    _sensorsConfigured = true;
+  }
+
+  Future<void> _stopSensors() async {
+    await manager.deactivateSensors();
+    _sensorsConfigured = false;
+  }
+
+  Future<void> startSound() async {
+    String id = "sync";
+    await _startSensors(id);
+    _state = ExperimentState.soundRunning;
+    notifyListeners();
+  }
+
+  Future<void> endSound() async {
+    await _stopSensors();
+    if (isLastBlock && isLastBlockStep) {
+      _state = ExperimentState.experimentComplete;
+      notifyListeners();
+    } else {
+      _state = ExperimentState.taskWaiting;
+      notifyListeners();
+    }
+  }
+
+  void repeatSound() {
+    _state = ExperimentState.soundWaiting;
+    notifyListeners();
   }
 
   void swallowed() {
@@ -151,36 +181,6 @@ class ExperimentController with ChangeNotifier {
     );
   }
 
-  void playSound() async {
-    // Load both files in parallel
-    final results = await Future.wait([
-      rootBundle.load('lib/apps/chew_side_detection/assets/dirac.wav'),
-      rootBundle.load('lib/apps/chew_side_detection/assets/white_noise.wav'),
-    ]);
-
-    final dirac = results[0];
-    final noise = results[1];
-
-    // Play dirac first
-    await _player.play(BytesSource(dirac.buffer.asUint8List()));
-
-    // Wait until dirac finishes
-    await _player.onPlayerComplete.first;
-
-    // Then play noise
-    await _player.play(BytesSource(noise.buffer.asUint8List()));
-
-    // Wait until noise finishes
-    await _player.onPlayerComplete.first;
-
-    if (isLastBlock && isLastBlockStep) {
-      _state = ExperimentState.experimentComplete;
-      notifyListeners();
-    } else {
-      _prepareTask(); // normal case (start next task)
-    }
-  }
-
   /// Start the timer for the current step (called manually by user)
   Future<void> startTaskTimer() async {
     if (_state != ExperimentState.taskWaiting) return;
@@ -188,7 +188,7 @@ class ExperimentController with ChangeNotifier {
     final task = currentTask;
     if (task == null) return;
 
-    _state = ExperimentState.taskRunning;
+    await _startSensors("${currentBlock.number}_${currentTask!.id}");
 
     // Log step start
     logger.logTaskStart(
@@ -197,6 +197,8 @@ class ExperimentController with ChangeNotifier {
       task.id,
       task.duration,
     );
+
+    _state = ExperimentState.taskRunning;
 
     // Start the progress timer
     _progressTimer = Timer.periodic(Duration(seconds: 1), (timer) {
@@ -215,6 +217,8 @@ class ExperimentController with ChangeNotifier {
   Future<void> _completeTask() async {
     _progressTimer?.cancel();
     _progressTimer = null;
+
+    await _stopSensors();
 
     logger.logTaskEnd();
 
@@ -258,7 +262,7 @@ class ExperimentController with ChangeNotifier {
     print("isLastBlockStep: $isLastBlockStep");
 
     if (isLastBlock && isLastBlockStep) {
-      _state = ExperimentState.playSound;
+      _state = ExperimentState.soundWaiting;
       notifyListeners();
       return;
     }
@@ -282,6 +286,8 @@ class ExperimentController with ChangeNotifier {
   Future<void> resetCurrentStepTimer() async {
     if (_state == ExperimentState.taskRunning ||
         _state == ExperimentState.taskComplete) {
+      await _stopSensors();
+
       _progressTimer?.cancel();
       _progressTimer = null;
       _elapsedSeconds = 0;
