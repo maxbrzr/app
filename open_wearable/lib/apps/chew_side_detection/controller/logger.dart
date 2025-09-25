@@ -6,7 +6,6 @@ import 'package:path_provider/path_provider.dart';
 /// Represents a single step event
 class StepEvent {
   final int blockNumber;
-  final String instruction;
   final String taskId;
   final int duration;
   final DateTime startTime;
@@ -16,7 +15,6 @@ class StepEvent {
 
   StepEvent({
     required this.blockNumber,
-    required this.instruction,
     required this.taskId,
     required this.duration,
     required this.startTime,
@@ -28,7 +26,6 @@ class StepEvent {
   List<String> toCsvRow() {
     return [
       blockNumber.toString(),
-      instruction,
       taskId,
       duration.toString(),
       startTime.toIso8601String(),
@@ -90,9 +87,9 @@ class SyncEvent {
 /// Logger for ExperimentManager
 class ExperimentLogger {
   static const String _stepsCsvHeader =
-      'Block,Instruction,Task,DurationS,StartTime,EndTime,RelativeStartMS,RelativeEndMS';
+      'Block,Task,DurationS,StartTime,EndTime,RelativeStartMS,RelativeEndMS';
   static const String _otherCsvHeader =
-      'Block,Instruction,Task,Time,RelativeTimeMS,EventType';
+      'Block,Task,Time,RelativeTimeMS,EventType';
   static const String _syncCsvHeader =
       "DeviceTimestamp,PhoneTimestamp,RelativePhoneTimeMS";
 
@@ -109,7 +106,7 @@ class ExperimentLogger {
 
   File get csvFile => _stepsCsvFile;
 
-  Future<void> initialize(String prefix) async {
+  Future<void> startLogging(String prefix) async {
     print("prefix = $prefix");
     final dir = await getApplicationDocumentsDirectory();
 
@@ -140,9 +137,7 @@ class ExperimentLogger {
         }
       }(),
     ]);
-  }
 
-  void startLogging() {
     _stepEvents.clear();
     _sessionStartTime = DateTime.now();
   }
@@ -193,7 +188,6 @@ class ExperimentLogger {
 
   void logTaskStart(
     int blockNumber,
-    String instruction,
     String taskId,
     int duration,
   ) {
@@ -201,7 +195,6 @@ class ExperimentLogger {
     final relative = now.difference(_sessionStartTime).inMilliseconds;
     final event = StepEvent(
       blockNumber: blockNumber,
-      instruction: instruction,
       taskId: taskId,
       duration: duration,
       startTime: now,

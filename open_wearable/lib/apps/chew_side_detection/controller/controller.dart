@@ -13,12 +13,11 @@ import 'logger.dart';
 enum ExperimentState {
   experimentNotStarted,
   configuringSensors,
-  reapplyingWearables,
-  soundWaiting,
-  soundRunning,
   taskWaiting,
   taskRunning,
   taskComplete,
+  reapplyingWearables,
+  soundSyncing,
   experimentComplete,
 }
 
@@ -26,17 +25,15 @@ class ExperimentController with ChangeNotifier {
   final ExperimentConfig expConfig;
   final ExperimentManager manager;
   final ExperimentLogger logger;
-  late String experimentId;
 
   // State
   final TextEditingController _expIdController = TextEditingController();
   int _currentBlockIndex = 0;
   int _currentBlockTaskIndex = 0;
-  int _currentTaskIndex = 0;
   ExperimentState _state = ExperimentState.experimentNotStarted;
   Timer? _progressTimer;
   int _elapsedSeconds = 0;
-  bool _sensorsConfigured = false;
+  late String _experimentId;
 
   ExperimentController({
     required this.expConfig,
@@ -67,91 +64,155 @@ class ExperimentController with ChangeNotifier {
     return _currentBlockTaskIndex == currentBlock.tasks.length - 1;
   }
 
+  bool get isFirstBlockStep => _currentBlockTaskIndex == 0;
+
   // State
   ExperimentState get state => _state;
 
   // Timer
   int get elapsedSeconds => _elapsedSeconds;
   double get progress {
-    if (currentTask == null ||
-        _state == ExperimentState.experimentNotStarted ||
-        _state == ExperimentState.taskWaiting) {
-      return 0.0;
+    if (_state == ExperimentState.taskRunning) {
+      final duration = currentTask!.duration;
+      if (duration == 0) return 0.0;
+      return _elapsedSeconds / duration;
     }
-
-    // Prevent division by zero
-    final duration = currentTask!.duration;
-    if (duration == 0) return 0.0;
-
-    // Calculate progress
-    return _elapsedSeconds / duration;
+    return 0.0;
   }
 
   // Experiment ID
   TextEditingController get expIdController => _expIdController;
 
-  /// Start the experiment session
+  // called from view
+
   Future<void> startExperiment() async {
-    if (_state != ExperimentState.experimentNotStarted) return;
-
-    try {
-      _state = ExperimentState.configuringSensors;
-      notifyListeners();
-
-      // Get experiment ID from text field
-      experimentId = _expIdController.text.trim();
-
-      await logger.initialize(experimentId);
-      logger.startLogging();
-
-      _state = ExperimentState.soundWaiting;
-      notifyListeners();
-    } catch (e) {
-      _state = ExperimentState.experimentNotStarted;
-      notifyListeners();
-      rethrow;
+    if (_state != ExperimentState.experimentNotStarted) {
+      throw Exception(
+        "When calling startExperiment, state must be experimentNotStarted",
+      );
     }
-  }
-
-  Future<void> _startSensors(String id) async {
-    // Set sensor log file prefix
-    // int number = currentBlock.number;
-    // String taskId = currentTask!.id;
-
-    await manager.setSensorLogFilePrefix(
-      "${experimentId}_${id}_${DateFormat('yyMMdd_HH_mm').format(DateTime.now())}_",
-    );
-    await manager.configureSensors();
-    // await Future.delayed(const Duration(seconds: 2));
-    _sensorsConfigured = true;
-  }
-
-  Future<void> _stopSensors() async {
-    await manager.deactivateSensors();
-    _sensorsConfigured = false;
-  }
-
-  Future<void> startSound() async {
-    String id = "sync";
-    await _startSensors(id);
-    _state = ExperimentState.soundRunning;
+    _experimentId = _expIdController.text.trim();
+    _state = ExperimentState.taskWaiting;
     notifyListeners();
   }
 
-  Future<void> endSound() async {
+  void stopExperiment() {
+    _progressTimer?.cancel();
+    _progressTimer = null;
+    _currentBlockIndex = 0;
+    _currentBlockTaskIndex = 0;
+    _elapsedSeconds = 0;
+    _state = ExperimentState.experimentNotStarted;
+    notifyListeners();
+  }
+
+  Future<void> startSync() async {
+    if (_state != ExperimentState.taskWaiting) {
+      throw Exception("When calling startSync, state must be taskWaiting");
+    }
+    String id = "sync";
+    await _startSensors(id);
+    _state = ExperimentState.soundSyncing;
+    notifyListeners();
+  }
+
+  Future<void> endSync() async {
+    if (_state != ExperimentState.soundSyncing) {
+      throw Exception("When calling endSync, state must be soundSyncing");
+    }
     await _stopSensors();
+    _state = ExperimentState.taskWaiting;
+    notifyListeners();
+  }
+
+  Future<void> startTask() async {
+    if (_state != ExperimentState.taskWaiting) {
+      throw Exception("When calling startTask, state must be taskWaiting");
+    }
+
+    String date = DateFormat('yyMMdd_HH_mm').format(DateTime.now());
+    String id =
+        "${_experimentId}_${currentBlock.number}_${currentTask!.id}_$date";
+
+    await logger.startLogging(id);
+    logger.logTaskStart(
+      currentBlock.number,
+      currentTask!.id,
+      currentTask!.duration,
+    );
+    await _startSensors(id);
+
+    _state = ExperimentState.taskRunning;
+    _progressTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      _elapsedSeconds++;
+      notifyListeners();
+      if (_elapsedSeconds >= currentTask!.duration) {
+        _completeTask();
+      }
+    });
+    notifyListeners();
+  }
+
+  Future<void> resetTask() async {
+    if (_state != ExperimentState.taskRunning) {
+      throw Exception("When calling resetTask, state must be taskRunning");
+    }
+    await _stopSensors();
+    _progressTimer?.cancel();
+    _progressTimer = null;
+    _prepareTask();
+  }
+
+  void repeatTask() {
+    if (_state != ExperimentState.taskComplete) {
+      throw Exception("When calling repeatTask, state must be taskComplete");
+    }
+    _prepareTask();
+  }
+
+  void nextStep() {
+    if (_state != ExperimentState.taskWaiting &&
+        _state != ExperimentState.taskComplete) {
+      throw Exception(
+        "When calling nextStep, state must be taskComplete, was in $_state",
+      );
+    }
     if (isLastBlock && isLastBlockStep) {
       _state = ExperimentState.experimentComplete;
       notifyListeners();
-    } else {
-      _state = ExperimentState.taskWaiting;
+    } else if (isLastBlockStep) {
+      _currentBlockIndex++;
+      _currentBlockTaskIndex = 0;
       notifyListeners();
+      _prepareTaskOrReapply();
+    } else {
+      _currentBlockTaskIndex++;
+      notifyListeners();
+      _prepareTaskOrReapply();
     }
   }
 
-  void repeatSound() {
-    _state = ExperimentState.soundWaiting;
-    notifyListeners();
+  void lastStep() {
+    if (_state != ExperimentState.taskWaiting &&
+        _state != ExperimentState.taskComplete) {
+      throw Exception(
+        "When calling lastStep, state must be taskComplete, was in $_state",
+      );
+    }
+    if (isFirstBlockStep) {
+      _currentBlockIndex--;
+      _currentBlockTaskIndex = currentBlock.tasks.length - 1;
+      notifyListeners();
+      _prepareTaskOrReapply();
+    } else {
+      _currentBlockTaskIndex--;
+      notifyListeners();
+      _prepareTaskOrReapply();
+    }
+  }
+
+  void reappliedWearables() {
+    _prepareTask();
   }
 
   void swallowed() {
@@ -181,149 +242,76 @@ class ExperimentController with ChangeNotifier {
     );
   }
 
-  /// Start the timer for the current step (called manually by user)
-  Future<void> startTaskTimer() async {
-    if (_state != ExperimentState.taskWaiting) return;
-    // If there's no task, do nothing
-    final task = currentTask;
-    if (task == null) return;
+  // private
 
-    await _startSensors("${currentBlock.number}_${currentTask!.id}");
+  Future<void> _startSensors(String id) async {
+    if (_state != ExperimentState.taskWaiting) {
+      throw Exception("When calling startSensors, state must be taskWaiting");
+    }
 
-    // Log step start
-    logger.logTaskStart(
-      currentBlock.number,
-      currentBlock.instruction,
-      task.id,
-      task.duration,
-    );
+    _state = ExperimentState.configuringSensors;
+    notifyListeners();
 
-    _state = ExperimentState.taskRunning;
+    String date = DateFormat('yyMMdd_HH_mm').format(DateTime.now());
+    String prefix = "${_experimentId}_${id}_${date}_";
+    await manager.setSensorLogFilePrefix(prefix);
+    await manager.configureSensors();
 
-    // Start the progress timer
-    _progressTimer = Timer.periodic(Duration(seconds: 1), (timer) {
-      _elapsedSeconds++;
-      notifyListeners();
-
-      if (_elapsedSeconds >= task.duration) {
-        _completeTask();
-      }
-    });
-
+    _state = ExperimentState.taskWaiting;
     notifyListeners();
   }
 
-  /// Complete the current step
+  Future<void> _stopSensors() async {
+    if (_state != ExperimentState.taskRunning &&
+        _state != ExperimentState.soundSyncing) {
+      throw Exception(
+        "When calling stopSensors, state must be taskRunning or soundSyncing",
+      );
+    }
+    _state = ExperimentState.configuringSensors;
+    notifyListeners();
+
+    await manager.deactivateSensors();
+
+    _state = ExperimentState.taskWaiting;
+    notifyListeners();
+  }
+
   Future<void> _completeTask() async {
+    if (_state != ExperimentState.taskRunning) {
+      throw Exception("When calling completeTask, state must be taskRunning");
+    }
+
     _progressTimer?.cancel();
     _progressTimer = null;
 
     await _stopSensors();
-
     logger.logTaskEnd();
+    await logger.stopAndWriteLogging();
 
     _state = ExperimentState.taskComplete;
     notifyListeners();
   }
 
-  void reappliedWearables() {
-    _prepareTask();
-  }
-
-  void _shouldReapplyWearables() {
+  void _shouldReapply() {
     _state = ExperimentState.reapplyingWearables;
     notifyListeners();
   }
 
-  /// Prepare the current step (without starting the timer)
   void _prepareTask() {
     _elapsedSeconds = 0;
     _state = ExperimentState.taskWaiting;
     notifyListeners();
   }
 
-  void _performAction() {
+  void _prepareTaskOrReapply() {
     final random = Random();
     final chance = random.nextDouble(); // value between 0.0 and 1.0
-
     if (chance < 0.1) {
-      _shouldReapplyWearables(); // 10% chance
+      _shouldReapply(); // 10% chance
     } else {
       _prepareTask(); // 90% chance
     }
-  }
-
-  /// Move to the next step in the experiment process
-  void nextStep() {
-    print("currentBlockIndex: $_currentBlockIndex");
-    print("currentBlockTaskIndex: $_currentBlockTaskIndex");
-    print("currentTaskIndex: $_currentTaskIndex");
-    print("isLastBlock: $isLastBlock");
-    print("isLastBlockStep: $isLastBlockStep");
-
-    if (isLastBlock && isLastBlockStep) {
-      _state = ExperimentState.soundWaiting;
-      notifyListeners();
-      return;
-    }
-
-    if (isLastBlockStep) {
-      _currentTaskIndex++;
-      _currentBlockIndex++;
-      _currentBlockTaskIndex = 0;
-      notifyListeners();
-      _performAction();
-      return;
-    }
-
-    _currentTaskIndex++;
-    _currentBlockTaskIndex++;
-    notifyListeners();
-    _performAction(); // Prepare the next step but don't start timer
-  }
-
-  /// Reset the current step timer back to 0
-  Future<void> resetCurrentStepTimer() async {
-    if (_state == ExperimentState.taskRunning ||
-        _state == ExperimentState.taskComplete) {
-      await _stopSensors();
-
-      _progressTimer?.cancel();
-      _progressTimer = null;
-      _elapsedSeconds = 0;
-
-      logger.discardLastTask();
-
-      // Return to waiting state
-      _state = ExperimentState.taskWaiting;
-      notifyListeners();
-    }
-  }
-
-  /// Stop the experiment completely
-  Future<void> stopExperiment() async {
-    _progressTimer?.cancel();
-    _progressTimer = null;
-
-    await Future.wait([
-      if (_sensorsConfigured)
-        () async {
-          await manager.deactivateSensors();
-          _sensorsConfigured = false;
-        }(),
-      if (_sensorsConfigured)
-        () async {
-          await logger.stopAndWriteLogging();
-        }(),
-    ]);
-
-    _state = ExperimentState.experimentNotStarted;
-    _currentTaskIndex = 0;
-    _currentBlockIndex = 0;
-    _currentBlockTaskIndex = 0;
-    _elapsedSeconds = 0;
-
-    notifyListeners();
   }
 
   @override

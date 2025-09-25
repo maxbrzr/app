@@ -190,7 +190,7 @@ class _ExperimentPageState extends State<ExperimentPage> {
 
         // Stop the experiment and sensors before navigating back
         if (_controller != null) {
-          await _controller!.stopExperiment();
+          _controller!.stopExperiment();
         }
 
         if (mounted) {

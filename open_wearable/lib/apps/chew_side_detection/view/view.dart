@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 const gapS = SizedBox(height: 8);
 const gapM = SizedBox(height: 16);
 const gapL = SizedBox(height: 24);
+const height = 48.0;
 
 class ExperimentView extends StatelessWidget {
   const ExperimentView({super.key});
@@ -153,31 +154,22 @@ class _TimerCard extends StatelessWidget {
     final task = controller.currentTask;
     if (task == null) return const SizedBox.shrink();
 
-    final minutes = controller.elapsedSeconds ~/ 60;
-    final seconds = controller.elapsedSeconds % 60;
-    final totalMinutes = task.duration ~/ 60;
-    final totalSeconds = task.duration % 60;
+    // Remaining time
+    final remainingSeconds =
+        (task.duration - controller.elapsedSeconds).clamp(0, task.duration);
+    final minutes = remainingSeconds ~/ 60;
+    final seconds = remainingSeconds % 60;
 
     return _AppCard(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}",
-            style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                ),
-            textAlign: TextAlign.center,
-          ),
-          gapS,
-          Text(
-            "of ${totalMinutes.toString().padLeft(2, '0')}:${totalSeconds.toString().padLeft(2, '0')}",
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-          gapM,
-          LinearProgressIndicator(value: controller.progress.clamp(0.0, 1.0)),
-        ],
+      child: Center(
+        child: Text(
+          "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}",
+          style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+              ),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }
@@ -298,18 +290,36 @@ class _ControlSection extends StatelessWidget {
   final ExperimentController controller;
   const _ControlSection({required this.controller});
 
-  bool _isConsentBlock() {
-    final instr = controller.currentBlock.instruction.toLowerCase();
-    return instr.contains('consent') ||
-        instr.contains('consent form') ||
-        instr.contains('fill out consent');
-  }
-
   @override
   Widget build(BuildContext context) {
     switch (controller.state) {
       case ExperimentState.experimentNotStarted:
-        return _startControls(context);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            PlatformTextField(
+              controller: controller.expIdController,
+              hintText: "Enter experiment ID",
+            ),
+            gapM,
+            PlatformElevatedButton(
+              onPressed: () {
+                final id = controller.expIdController.text.trim();
+                if (id.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Please enter the experiment ID."),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+                controller.startExperiment();
+              },
+              child: const Text("Start Experiment"),
+            ),
+          ],
+        );
 
       case ExperimentState.configuringSensors:
         return const Center(
@@ -323,72 +333,138 @@ class _ControlSection extends StatelessWidget {
           ),
         );
 
-      case ExperimentState.soundWaiting:
-        return SizedBox(
-          width: double.infinity,
-          child: PlatformElevatedButton(
-            onPressed: controller.startSound,
-            child: const Text("Start Sound"),
-            material: (_, __) => MaterialElevatedButtonData(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                foregroundColor: Colors.white, // text color
-              ),
-            ),
-          ),
-        );
-
-      case ExperimentState.soundRunning:
-        return SizedBox(
-          width: double.infinity,
-          child: PlatformElevatedButton(
-            onPressed: controller.endSound,
-            child: const Text("Sound Complete"),
-            material: (_, __) => MaterialElevatedButtonData(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                foregroundColor: Colors.white, // text color
-              ),
-            ),
-          ),
-        );
-
       case ExperimentState.taskWaiting:
-        if (_isConsentBlock()) return _consentControls(context);
-        // Task exists but not started → Start Timer
         if (controller.currentTask != null) {
-          return SizedBox(
-            width: double.infinity,
-            child: PlatformElevatedButton(
-              onPressed: controller.startTaskTimer,
-              child: const Text("Start Timer"),
-            ),
+          return Column(
+            children: [
+              SizedBox(
+                width: double.infinity,
+                height: height,
+                child: PlatformElevatedButton(
+                  onPressed: controller.startTask,
+                  child: const Text("Start Timer"),
+                ),
+              ),
+              gapL,
+              SizedBox(
+                width: double.infinity,
+                height: height,
+                child: PlatformElevatedButton(
+                  onPressed: controller.nextStep,
+                  child: const Text("Skip Task"),
+                  material: (_, __) => MaterialElevatedButtonData(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white, // text color
+                    ),
+                  ),
+                ),
+              ),
+              gapL,
+              SizedBox(
+                width: double.infinity,
+                height: height,
+                child: PlatformElevatedButton(
+                  onPressed: controller.lastStep,
+                  child: const Text("Last Task"),
+                  material: (_, __) => MaterialElevatedButtonData(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white, // text color
+                    ),
+                  ),
+                ),
+              ),
+              gapL,
+              SizedBox(
+                width: double.infinity,
+                height: height,
+                child: PlatformElevatedButton(
+                  onPressed: controller.startSync,
+                  child: Text("Start Syncing"),
+                  material: (_, __) => MaterialElevatedButtonData(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white, // text color
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         }
-        // Otherwise allow next step
-        return _nextStepButton(context);
+        return Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: height,
+              child: PlatformElevatedButton(
+                onPressed: controller.nextStep,
+                child: Text(
+                  controller.isLastBlockStep ? "Next Block" : "Next Task",
+                ),
+              ),
+            ),
+            gapL,
+            SizedBox(
+              width: double.infinity,
+              height: height,
+              child: PlatformElevatedButton(
+                onPressed: controller.startSync,
+                child: Text("Start Syncing"),
+                material: (_, __) => MaterialElevatedButtonData(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white, // text color
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+
+      case ExperimentState.soundSyncing:
+        return Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: height,
+              child: PlatformElevatedButton(
+                onPressed: controller.endSync,
+                child: const Text("End Syncing"),
+                material: (_, __) => MaterialElevatedButtonData(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white, // text color
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
 
       case ExperimentState.taskRunning:
         return Column(
           children: [
             SizedBox(
               width: double.infinity,
+              height: height,
               child: PlatformElevatedButton(
-                onPressed: controller.resetCurrentStepTimer,
+                onPressed: controller.resetTask,
                 child: const Text("Reset Task"),
                 material: (_, __) => MaterialElevatedButtonData(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                    backgroundColor: Colors.black,
                     foregroundColor: Colors.white, // text color
                   ),
                 ),
               ),
             ),
             gapL,
-            if (!_isConsentBlock() &&
-                [2, 3, 4].contains(controller.currentBlock.number))
+            if ([2, 3, 4].contains(controller.currentBlock.number))
               Row(
                 children: [
+                  // Left button (Swallowed)
                   Expanded(
                     child: SizedBox(
                       height: 64,
@@ -398,48 +474,54 @@ class _ControlSection extends StatelessWidget {
                         material: (_, __) => MaterialElevatedButtonData(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange,
-                            foregroundColor: Colors.white, // text color
+                            foregroundColor: Colors.white,
                           ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
+
+                  // Right side (stacked buttons)
                   Expanded(
-                    child: SizedBox(
-                      height: 64,
-                      child: PlatformElevatedButton(
-                        onPressed: controller.newPieceOfFood,
-                        child: const Text(
-                          "New Piece of Food",
-                          textAlign: TextAlign.center,
-                        ),
-                        material: (_, __) => MaterialElevatedButtonData(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.purple,
-                            foregroundColor: Colors.white, // text color
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: height,
+                          width: double.infinity,
+                          child: PlatformElevatedButton(
+                            onPressed: controller.newPieceOfFood,
+                            child: const Text(
+                              "New Piece of Food",
+                              textAlign: TextAlign.center,
+                            ),
+                            material: (_, __) => MaterialElevatedButtonData(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.purple,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: SizedBox(
-                      height: 64,
-                      child: PlatformElevatedButton(
-                        onPressed: controller.bitOffPiece,
-                        child: const Text(
-                          "Bit Off Piece",
-                          textAlign: TextAlign.center,
-                        ),
-                        material: (_, __) => MaterialElevatedButtonData(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white, // text color
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: height,
+                          width: double.infinity,
+                          child: PlatformElevatedButton(
+                            onPressed: controller.bitOffPiece,
+                            child: const Text(
+                              "Bit Off Piece",
+                              textAlign: TextAlign.center,
+                            ),
+                            material: (_, __) => MaterialElevatedButtonData(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ],
@@ -450,6 +532,7 @@ class _ControlSection extends StatelessWidget {
       case ExperimentState.reapplyingWearables:
         return SizedBox(
           width: double.infinity,
+          height: height,
           child: PlatformElevatedButton(
             onPressed: controller.reappliedWearables,
             child: const Text("Reapplied Wearables"),
@@ -463,19 +546,28 @@ class _ControlSection extends StatelessWidget {
         );
 
       case ExperimentState.taskComplete:
-        if (_isConsentBlock()) return _consentControls(context);
         return Column(
           children: [
-            _nextStepButton(context),
+            SizedBox(
+              width: double.infinity,
+              height: height,
+              child: PlatformElevatedButton(
+                onPressed: controller.nextStep,
+                child: Text(
+                  controller.isLastBlockStep ? "Next Block" : "Next Task",
+                ),
+              ),
+            ),
             gapM,
             SizedBox(
               width: double.infinity,
+              height: height,
               child: PlatformElevatedButton(
-                onPressed: controller.resetCurrentStepTimer,
+                onPressed: controller.repeatTask,
                 child: const Text("Repeat Task"),
                 material: (_, __) => MaterialElevatedButtonData(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                    backgroundColor: Colors.black,
                     foregroundColor: Colors.white, // text color
                   ),
                 ),
@@ -489,6 +581,7 @@ class _ControlSection extends StatelessWidget {
           children: [
             SizedBox(
               width: double.infinity,
+              height: height,
               child: PlatformElevatedButton(
                 onPressed: controller.stopExperiment,
                 child: const Text("Finish Experiment"),
@@ -497,63 +590,5 @@ class _ControlSection extends StatelessWidget {
           ],
         );
     }
-  }
-
-  Widget _nextStepButton(BuildContext context) {
-    final label = controller.isLastBlockStep ? "Next Block" : "Next Task";
-    return SizedBox(
-      width: double.infinity,
-      child: PlatformElevatedButton(
-        onPressed: controller.nextStep,
-        child: Text(label),
-      ),
-    );
-  }
-
-  Widget _startControls(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        PlatformTextField(
-          controller: controller.expIdController,
-          hintText: "Enter experiment ID",
-        ),
-        gapM,
-        PlatformElevatedButton(
-          onPressed: () {
-            final id = controller.expIdController.text.trim();
-            if (id.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Please enter the experiment ID."),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              return;
-            }
-            controller.startExperiment();
-          },
-          child: const Text("Start Experiment"),
-        ),
-      ],
-    );
-  }
-
-  Widget _consentControls(BuildContext context) {
-    final label = controller.isLastBlockStep ? "Next Block" : "Continue";
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        gapM,
-        SizedBox(
-          width: double.infinity,
-          child: PlatformElevatedButton(
-            onPressed: controller.nextStep,
-            child: Text(label),
-          ),
-        ),
-      ],
-    );
   }
 }
