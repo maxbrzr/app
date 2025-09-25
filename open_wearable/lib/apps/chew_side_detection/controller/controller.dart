@@ -110,7 +110,10 @@ class ExperimentController with ChangeNotifier {
     if (_state != ExperimentState.taskWaiting) {
       throw Exception("When calling startSync, state must be taskWaiting");
     }
-    String id = "sync";
+
+    String date = DateFormat('yyMMdd_HH_mm').format(DateTime.now());
+    String id = "${_experimentId}_sync_$date";
+    await logger.startLogging(id);
     await _startSensors(id);
     _state = ExperimentState.soundSyncing;
     notifyListeners();
@@ -120,7 +123,11 @@ class ExperimentController with ChangeNotifier {
     if (_state != ExperimentState.soundSyncing) {
       throw Exception("When calling endSync, state must be soundSyncing");
     }
+
     await _stopSensors();
+    logger.logTaskEnd();
+    await logger.stopAndWriteLogging();
+
     _state = ExperimentState.taskWaiting;
     notifyListeners();
   }
@@ -158,6 +165,9 @@ class ExperimentController with ChangeNotifier {
       throw Exception("When calling resetTask, state must be taskRunning");
     }
     await _stopSensors();
+    logger.logTaskEnd();
+    await logger.stopAndWriteLogging();
+
     _progressTimer?.cancel();
     _progressTimer = null;
     _prepareTask();
