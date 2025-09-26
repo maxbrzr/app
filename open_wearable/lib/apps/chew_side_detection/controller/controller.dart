@@ -266,6 +266,7 @@ class ExperimentController with ChangeNotifier {
     String prefix = "${_experimentId}_${id}_${date}_";
     await manager.setSensorLogFilePrefix(prefix);
     await manager.configureSensors();
+    await logger.sensorsReady;
 
     _state = ExperimentState.taskWaiting;
     notifyListeners();

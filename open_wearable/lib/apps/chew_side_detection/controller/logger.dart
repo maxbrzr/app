@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'package:csv/csv.dart';
@@ -103,8 +104,16 @@ class ExperimentLogger {
   final List<OtherEvent> _otherEvents = [];
   final List<SyncEvent> _syncLeftEvents = [];
   final List<SyncEvent> _syncRightEvents = [];
+  Completer<void>? _sensorsReady;
 
   File get csvFile => _stepsCsvFile;
+  Future<void> get sensorsReady {
+    if (_syncLeftEvents.isNotEmpty && _syncRightEvents.isNotEmpty) {
+      return Future.value(); // already ready
+    }
+    _sensorsReady ??= Completer<void>();
+    return _sensorsReady!.future;
+  }
 
   Future<void> startLogging(String prefix) async {
     print("prefix = $prefix");
@@ -149,6 +158,7 @@ class ExperimentLogger {
     );
     print(event.toCsvRow());
     _syncLeftEvents.add(event);
+    _checkReady();
   }
 
   void logSyncRightEvent(int deviceTimestamp) {
@@ -161,6 +171,7 @@ class ExperimentLogger {
     );
     print(event.toCsvRow());
     _syncRightEvents.add(event);
+    _checkReady();
   }
 
   void logTaskStart(
@@ -265,6 +276,15 @@ class ExperimentLogger {
   static Future<void> deleteLogFile(File file) async {
     if (await file.exists()) {
       await file.delete();
+    }
+  }
+
+  void _checkReady() {
+    if (_syncLeftEvents.isNotEmpty &&
+        _syncRightEvents.isNotEmpty &&
+        _sensorsReady != null &&
+        !_sensorsReady!.isCompleted) {
+      _sensorsReady!.complete();
     }
   }
 }
