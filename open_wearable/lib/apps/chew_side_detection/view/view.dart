@@ -294,7 +294,18 @@ class _ControlSection extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (controller.state) {
       case ExperimentState.experimentNotStarted:
-        return Container();
+        return Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: height,
+              child: PlatformElevatedButton(
+                onPressed: controller.startExperiment,
+                child: const Text("Start Experiment"),
+              ),
+            ),
+          ],
+        );
 
       case ExperimentState.configuringSensors:
         return const Center(

@@ -63,7 +63,7 @@ class ExperimentConfig {
   factory ExperimentConfig.fromYaml(YamlMap map, String seed) {
     // Parse blocks
     final blockList = map['blocks'] as YamlList;
-    final blocks = blockList.map((entry) {
+    final blocks = blockList.asMap().entries.map((entry) {
       final index = entry.key;
       final block = entry.value as YamlMap;
       final blockSeed = "${seed}_$index".hashCode;
