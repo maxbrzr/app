@@ -258,9 +258,7 @@ class ExperimentController with ChangeNotifier {
     _state = ExperimentState.configuringSensors;
     notifyListeners();
 
-    String date = DateFormat('yyMMdd_HH_mm').format(DateTime.now());
-    String prefix = "${experimentId}_${id}_${date}_";
-    await manager.setSensorLogFilePrefix(prefix);
+    await manager.setSensorLogFilePrefix(id);
     await manager.configureSensors();
     await logger.sensorsReady;
 
