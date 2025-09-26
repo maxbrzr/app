@@ -108,10 +108,16 @@ class ExperimentLogger {
 
   File get csvFile => _stepsCsvFile;
   Future<void> get sensorsReady {
+    // If both are already satisfied, just return immediately
     if (_syncLeftEvents.isNotEmpty && _syncRightEvents.isNotEmpty) {
-      return Future.value(); // already ready
+      return Future.value();
     }
-    _sensorsReady ??= Completer<void>();
+
+    // Create a new pending completer if none exists or the old one is completed
+    if (_sensorsReady == null || _sensorsReady!.isCompleted) {
+      _sensorsReady = Completer<void>();
+    }
+
     return _sensorsReady!.future;
   }
 
@@ -125,6 +131,11 @@ class ExperimentLogger {
     _syncRightCsvFile = File('${dir.path}/${prefix}_sync_right_log.csv');
 
     _stepEvents.clear();
+    _otherEvents.clear();
+    _syncLeftEvents.clear();
+    _syncRightEvents.clear();
+
+    _sensorsReady = null;
     _sessionStartTime = DateTime.now();
   }
 
@@ -250,6 +261,8 @@ class ExperimentLogger {
     _otherEvents.clear();
     _syncLeftEvents.clear();
     _syncRightEvents.clear();
+
+    _sensorsReady = null;
   }
 
   /// Get all log files in the documents directory

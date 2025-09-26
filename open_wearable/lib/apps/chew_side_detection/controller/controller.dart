@@ -261,6 +261,7 @@ class ExperimentController with ChangeNotifier {
     await manager.setSensorLogFilePrefix(id);
     await manager.configureSensors();
     await logger.sensorsReady;
+    print("NOW");
 
     _state = ExperimentState.taskWaiting;
     notifyListeners();
