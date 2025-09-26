@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:yaml/yaml.dart';
 
 /// Represents a task for chewing side detection
@@ -21,12 +23,11 @@ class ExperimentBlock {
     required this.tasks,
   });
 
-  factory ExperimentBlock.fromYaml(YamlMap map) {
+  factory ExperimentBlock.fromYaml(YamlMap map, int blockSeed) {
     final number = map["block_number"] as int;
     final instruction = map["instruction"] as String;
     final yamlTasks = (map["tasks"] as YamlList?) ?? YamlList.wrap([]);
-    // print("block number: $number");
-    // print("instruction: $instruction");
+    final Random random = Random(blockSeed);
 
     final List<Task> tasks = [];
     for (var task in yamlTasks) {
@@ -49,7 +50,7 @@ class ExperimentBlock {
       );
     }
 
-    tasks.shuffle();
+    tasks.shuffle(random);
     return ExperimentBlock(
       number: number,
       instruction: instruction,

@@ -14,8 +14,10 @@ class ConfigSelectionPage extends StatefulWidget {
   final Wearable rightWearable;
   final SensorConfigurationProvider leftConfigProvider;
   final SensorConfigurationProvider rightConfigProvider;
+  final TextEditingController _expIdController = TextEditingController();
+  TextEditingController get expIdController => _expIdController;
 
-  const ConfigSelectionPage({
+  ConfigSelectionPage({
     super.key,
     required this.leftWearable,
     required this.leftConfigProvider,
@@ -187,7 +189,14 @@ class _ConfigSelectionPageState extends State<ConfigSelectionPage> {
               );
             },
           ),
-
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: PlatformTextField(
+              controller: widget.expIdController,
+              hintText: "Enter experiment ID",
+            ),
+          ),
           // Configuration list
           Expanded(
             child: ListView.builder(
@@ -208,6 +217,16 @@ class _ConfigSelectionPageState extends State<ConfigSelectionPage> {
                       subtitle: Text("Built-in configuration"),
                       trailing: Icon(Icons.arrow_forward_ios),
                       onTap: () {
+                        final id = widget.expIdController.text.trim();
+                        if (id.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Please enter the experiment ID."),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
                         Navigator.push(
                           context,
                           platformPageRoute(
@@ -218,6 +237,7 @@ class _ConfigSelectionPageState extends State<ConfigSelectionPage> {
                               rightWearable: widget.rightWearable,
                               rightConfigProvider: widget.rightConfigProvider,
                               configPath: configPath,
+                              experimentId: id,
                             ),
                           ),
                         );
@@ -276,6 +296,18 @@ class _ConfigSelectionPageState extends State<ConfigSelectionPage> {
                         subtitle: Text("Custom configuration"),
                         trailing: Icon(Icons.arrow_forward_ios),
                         onTap: () {
+                          final id = widget.expIdController.text.trim();
+                          if (id.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text("Please enter the experiment ID."),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
                           Navigator.push(
                             context,
                             platformPageRoute(
@@ -286,6 +318,7 @@ class _ConfigSelectionPageState extends State<ConfigSelectionPage> {
                                 rightWearable: widget.rightWearable,
                                 rightConfigProvider: widget.rightConfigProvider,
                                 configPath: configPath,
+                                experimentId: id,
                               ),
                             ),
                           );

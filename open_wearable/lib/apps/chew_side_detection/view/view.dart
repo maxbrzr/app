@@ -294,32 +294,7 @@ class _ControlSection extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (controller.state) {
       case ExperimentState.experimentNotStarted:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            PlatformTextField(
-              controller: controller.expIdController,
-              hintText: "Enter experiment ID",
-            ),
-            gapM,
-            PlatformElevatedButton(
-              onPressed: () {
-                final id = controller.expIdController.text.trim();
-                if (id.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Please enter the experiment ID."),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  return;
-                }
-                controller.startExperiment();
-              },
-              child: const Text("Start Experiment"),
-            ),
-          ],
-        );
+        return Container();
 
       case ExperimentState.configuringSensors:
         return const Center(

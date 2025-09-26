@@ -37,7 +37,6 @@ class ExperimentConfig {
   final List<ExperimentBlock> blocks;
   final Map<String, String> sensorIdMap;
   final List<SensorConfig> globalSensorConfigs;
-  // String experimentId = "test_participant";
 
   ExperimentConfig({
     required this.blocks,
@@ -61,12 +60,15 @@ class ExperimentConfig {
     return sensorIdMap[normalizedName] ?? defaultSensorIdMap[normalizedName];
   }
 
-  factory ExperimentConfig.fromYaml(YamlMap map) {
+  factory ExperimentConfig.fromYaml(YamlMap map, String seed) {
     // Parse blocks
     final blockList = map['blocks'] as YamlList;
-    final blocks = blockList
-        .map((block) => ExperimentBlock.fromYaml(block as YamlMap))
-        .toList();
+    final blocks = blockList.map((entry) {
+      final index = entry.key;
+      final block = entry.value as YamlMap;
+      final blockSeed = "${seed}_$index".hashCode;
+      return ExperimentBlock.fromYaml(block, blockSeed);
+    }).toList();
 
     // Parse sensor ID mapping if it exists
     Map<String, String> sensorIdMap = {};
@@ -93,7 +95,7 @@ class ExperimentConfig {
   }
 
   /// Loads a configuration from a file path
-  static Future<ExperimentConfig> fromFile(String path) async {
+  static Future<ExperimentConfig> fromFile(String path, String seed) async {
     String yamlString;
 
     // Check if the path is an asset or a file
@@ -108,7 +110,7 @@ class ExperimentConfig {
     }
 
     final yamlMap = loadYaml(yamlString) as YamlMap;
-    final config = ExperimentConfig.fromYaml(yamlMap);
+    final config = ExperimentConfig.fromYaml(yamlMap, seed);
     // config.name = _generateNameFromConfigFile(path);
     return config;
   }

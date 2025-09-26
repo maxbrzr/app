@@ -25,21 +25,22 @@ class ExperimentController with ChangeNotifier {
   final ExperimentConfig expConfig;
   final ExperimentManager manager;
   final ExperimentLogger logger;
+  final String experimentId;
+  final Random reapplyRandom;
 
   // State
-  final TextEditingController _expIdController = TextEditingController();
   int _currentBlockIndex = 0;
   int _currentBlockTaskIndex = 0;
   ExperimentState _state = ExperimentState.experimentNotStarted;
   Timer? _progressTimer;
   int _elapsedSeconds = 0;
-  late String _experimentId;
 
   ExperimentController({
     required this.expConfig,
     required this.manager,
     required this.logger,
-  });
+    required this.experimentId,
+  }) : reapplyRandom = Random(experimentId.hashCode);
 
   // Indices
   int get currentBlockIndex => _currentBlockIndex;
@@ -80,18 +81,13 @@ class ExperimentController with ChangeNotifier {
     return 0.0;
   }
 
-  // Experiment ID
-  TextEditingController get expIdController => _expIdController;
-
   // called from view
-
   Future<void> startExperiment() async {
     if (_state != ExperimentState.experimentNotStarted) {
       throw Exception(
         "When calling startExperiment, state must be experimentNotStarted",
       );
     }
-    _experimentId = _expIdController.text.trim();
     _state = ExperimentState.taskWaiting;
     notifyListeners();
   }
@@ -112,7 +108,7 @@ class ExperimentController with ChangeNotifier {
     }
 
     String date = DateFormat('yyMMdd_HH_mm').format(DateTime.now());
-    String id = "${_experimentId}_sync_$date";
+    String id = "${experimentId}_sync_$date";
     await logger.startLogging(id);
     await _startSensors(id);
     _state = ExperimentState.soundSyncing;
@@ -139,7 +135,7 @@ class ExperimentController with ChangeNotifier {
 
     String date = DateFormat('yyMMdd_HH_mm').format(DateTime.now());
     String id =
-        "${_experimentId}_${currentBlock.number}_${currentTask!.id}_$date";
+        "${experimentId}_${currentBlock.number}_${currentTask!.id}_$date";
 
     await logger.startLogging(id);
     logger.logTaskStart(
@@ -263,7 +259,7 @@ class ExperimentController with ChangeNotifier {
     notifyListeners();
 
     String date = DateFormat('yyMMdd_HH_mm').format(DateTime.now());
-    String prefix = "${_experimentId}_${id}_${date}_";
+    String prefix = "${experimentId}_${id}_${date}_";
     await manager.setSensorLogFilePrefix(prefix);
     await manager.configureSensors();
     await logger.sensorsReady;
@@ -316,8 +312,7 @@ class ExperimentController with ChangeNotifier {
   }
 
   void _prepareTaskOrReapply() {
-    final random = Random();
-    final chance = random.nextDouble(); // value between 0.0 and 1.0
+    final chance = reapplyRandom.nextDouble(); // value between 0.0 and 1.0
     if (chance < 0.1) {
       _shouldReapply(); // 10% chance
     } else {

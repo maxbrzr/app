@@ -22,6 +22,7 @@ class ExperimentPage extends StatefulWidget {
   final SensorConfigurationProvider leftConfigProvider;
   final SensorConfigurationProvider rightConfigProvider;
   final String configPath;
+  final String experimentId;
 
   const ExperimentPage({
     super.key,
@@ -30,6 +31,7 @@ class ExperimentPage extends StatefulWidget {
     required this.rightWearable,
     required this.rightConfigProvider,
     required this.configPath,
+    required this.experimentId,
   });
 
   @override
@@ -60,7 +62,10 @@ class _ExperimentPageState extends State<ExperimentPage> {
         }
       }
 
-      final expConfig = await ExperimentConfig.fromFile(widget.configPath);
+      final expConfig = await ExperimentConfig.fromFile(
+        widget.configPath,
+        widget.experimentId,
+      );
 
       setState(() {
         _logger = ExperimentLogger();
@@ -78,6 +83,7 @@ class _ExperimentPageState extends State<ExperimentPage> {
           expConfig: expConfig,
           manager: _manager!,
           logger: _logger!,
+          experimentId: widget.experimentId,
         );
 
         _isLoading = false;
