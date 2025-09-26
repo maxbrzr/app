@@ -6,7 +6,7 @@ global_sensor_configs:
   - sensor: microphone
     sample_rate: 48000
   - sensor: ppg
-    sample_rate: 400
+    sample_rate: 50
   - sensor: bone_conduction
     sample_rate: 1600
   - sensor: imu

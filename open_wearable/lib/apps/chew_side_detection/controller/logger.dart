@@ -115,29 +115,6 @@ class ExperimentLogger {
     _syncLeftCsvFile = File('${dir.path}/${prefix}_sync_left_log.csv');
     _syncRightCsvFile = File('${dir.path}/${prefix}_sync_right_log.csv');
 
-    await Future.wait([
-      () async {
-        if (!await _stepsCsvFile.exists()) {
-          await _stepsCsvFile.writeAsString('$_stepsCsvHeader\n');
-        }
-      }(),
-      () async {
-        if (!await _otherCsvFile.exists()) {
-          await _otherCsvFile.writeAsString('$_otherCsvHeader\n');
-        }
-      }(),
-      () async {
-        if (!await _syncLeftCsvFile.exists()) {
-          await _syncLeftCsvFile.writeAsString('$_syncCsvHeader\n');
-        }
-      }(),
-      () async {
-        if (!await _syncRightCsvFile.exists()) {
-          await _syncRightCsvFile.writeAsString('$_syncCsvHeader\n');
-        }
-      }(),
-    ]);
-
     _stepEvents.clear();
     _sessionStartTime = DateTime.now();
   }
@@ -222,21 +199,25 @@ class ExperimentLogger {
     print("Finalizing experiment");
 
     final stepsRows = <List<String>>[];
+    stepsRows.add(_stepsCsvHeader.split(','));
     for (final e in _stepEvents) {
       stepsRows.add(e.toCsvRow());
     }
 
     final otherRows = <List<String>>[];
+    otherRows.add(_otherCsvHeader.split(','));
     for (final e in _otherEvents) {
       otherRows.add(e.toCsvRow());
     }
 
     final syncLeftRows = <List<String>>[];
+    syncLeftRows.add(_syncCsvHeader.split(','));
     for (final e in _syncLeftEvents) {
       syncLeftRows.add(e.toCsvRow());
     }
 
     final syncRightRows = <List<String>>[];
+    syncRightRows.add(_syncCsvHeader.split(','));
     for (final e in _syncRightEvents) {
       syncRightRows.add(e.toCsvRow());
     }
