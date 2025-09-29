@@ -121,14 +121,17 @@ class ExperimentLogger {
     return _sensorsReady!.future;
   }
 
-  Future<void> startLogging(String prefix) async {
+  Future<void> startLogging(String prefix, bool sync) async {
     print("prefix = $prefix");
     final dir = await getApplicationDocumentsDirectory();
 
-    _stepsCsvFile = File('${dir.path}/${prefix}_steps_log.csv');
-    _otherCsvFile = File('${dir.path}/${prefix}_other_log.csv');
-    _syncLeftCsvFile = File('${dir.path}/${prefix}_sync_left_log.csv');
-    _syncRightCsvFile = File('${dir.path}/${prefix}_sync_right_log.csv');
+    if (!sync) {
+      _stepsCsvFile = File('${dir.path}/${prefix}steps_log.csv');
+      _otherCsvFile = File('${dir.path}/${prefix}other_log.csv');
+    }
+
+    _syncLeftCsvFile = File('${dir.path}/${prefix}sync_left_log.csv');
+    _syncRightCsvFile = File('${dir.path}/${prefix}sync_right_log.csv');
 
     _stepEvents.clear();
     _otherEvents.clear();
@@ -217,20 +220,10 @@ class ExperimentLogger {
     if (_stepEvents.isNotEmpty) _stepEvents.removeLast();
   }
 
-  Future<void> stopAndWriteLogging() async {
+  Future<void> stopAndWriteLogging(bool sync) async {
     print("Finalizing experiment");
 
-    final stepsRows = <List<String>>[];
-    stepsRows.add(_stepsCsvHeader.split(','));
-    for (final e in _stepEvents) {
-      stepsRows.add(e.toCsvRow());
-    }
-
-    final otherRows = <List<String>>[];
-    otherRows.add(_otherCsvHeader.split(','));
-    for (final e in _otherEvents) {
-      otherRows.add(e.toCsvRow());
-    }
+    final converter = ListToCsvConverter();
 
     final syncLeftRows = <List<String>>[];
     syncLeftRows.add(_syncCsvHeader.split(','));
@@ -244,18 +237,35 @@ class ExperimentLogger {
       syncRightRows.add(e.toCsvRow());
     }
 
-    final converter = ListToCsvConverter();
-    final stepsCsvData = converter.convert(stepsRows);
-    final otherCsvData = converter.convert(otherRows);
     final syncLeftCsvData = converter.convert(syncLeftRows);
     final syncRightCsvData = converter.convert(syncRightRows);
 
     await Future.wait([
-      _stepsCsvFile.writeAsString(stepsCsvData, mode: FileMode.write),
-      _otherCsvFile.writeAsString(otherCsvData, mode: FileMode.write),
       _syncLeftCsvFile.writeAsString(syncLeftCsvData, mode: FileMode.write),
       _syncRightCsvFile.writeAsString(syncRightCsvData, mode: FileMode.write),
     ]);
+
+    if (!sync) {
+      final stepsRows = <List<String>>[];
+      stepsRows.add(_stepsCsvHeader.split(','));
+      for (final e in _stepEvents) {
+        stepsRows.add(e.toCsvRow());
+      }
+
+      final otherRows = <List<String>>[];
+      otherRows.add(_otherCsvHeader.split(','));
+      for (final e in _otherEvents) {
+        otherRows.add(e.toCsvRow());
+      }
+
+      final stepsCsvData = converter.convert(stepsRows);
+      final otherCsvData = converter.convert(otherRows);
+
+      await Future.wait([
+        _stepsCsvFile.writeAsString(stepsCsvData, mode: FileMode.write),
+        _otherCsvFile.writeAsString(otherCsvData, mode: FileMode.write),
+      ]);
+    }
 
     _stepEvents.clear();
     _otherEvents.clear();

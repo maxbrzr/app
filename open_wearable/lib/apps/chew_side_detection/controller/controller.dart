@@ -109,8 +109,8 @@ class ExperimentController with ChangeNotifier {
     }
 
     String date = DateFormat('yyMMdd_HH_mm_ss').format(DateTime.now());
-    String id = "${experimentId}_sync_${_syncCounter}_$date";
-    await logger.startLogging(id);
+    String id = "${experimentId}_sync_${_syncCounter}_${date}_";
+    await logger.startLogging(id, true);
     await _startSensors(id);
     _state = ExperimentState.soundSyncing;
     notifyListeners();
@@ -123,7 +123,7 @@ class ExperimentController with ChangeNotifier {
 
     await _stopSensors();
     logger.logTaskEnd();
-    await logger.stopAndWriteLogging();
+    await logger.stopAndWriteLogging(true);
 
     _syncCounter++;
     _state = ExperimentState.taskWaiting;
@@ -137,9 +137,9 @@ class ExperimentController with ChangeNotifier {
 
     String date = DateFormat('yyMMdd_HH_mm_ss').format(DateTime.now());
     String id =
-        "${experimentId}_${currentBlock.number}_${currentTask!.id}_$date";
+        "${experimentId}_${currentBlock.number}_${currentTask!.id}_${date}_";
 
-    await logger.startLogging(id);
+    await logger.startLogging(id, false);
     logger.logTaskStart(
       currentBlock.number,
       currentTask!.id,
@@ -164,7 +164,7 @@ class ExperimentController with ChangeNotifier {
     }
     await _stopSensors();
     logger.logTaskEnd();
-    await logger.stopAndWriteLogging();
+    await logger.stopAndWriteLogging(false);
 
     _progressTimer?.cancel();
     _progressTimer = null;
@@ -295,7 +295,7 @@ class ExperimentController with ChangeNotifier {
 
     await _stopSensors();
     logger.logTaskEnd();
-    await logger.stopAndWriteLogging();
+    await logger.stopAndWriteLogging(false);
 
     _state = ExperimentState.taskComplete;
     notifyListeners();
