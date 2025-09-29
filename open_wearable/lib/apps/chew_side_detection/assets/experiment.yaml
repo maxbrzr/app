@@ -20,38 +20,38 @@ blocks:
   - block_number: 1
     instruction: "Please execute the indicated task."
     tasks:
-      - id: sit-still
+      - id: still
         name: "Sit still"
         duration: 30
       - id: drink
         name: "Drink"
         duration: 30
-      - id: move-head
+      - id: head
         name: "Move your head"
         duration: 30
-      - id: facial-expressions
+      - id: face
         name: "Perform facial expressions"
         duration: 30
-      - id: read-aloud
+      - id: read
         name: "Read aloud"
         duration: 30
   - block_number: 2
     instruction: "Please chew the indicated food on the indicated side."
     tasks:
-      - id: nut-mix
-        name: "Nut Mix"
+      - id: nuts
+        name: "Nut mix"
         duration: 30
-      - id: salt-pretzels
-        name: "Salt Pretzels"
+      - id: pretzels
+        name: "Salt pretzels"
         duration: 30
-      - id: potato-chips
-        name: "Potato Chips"
+      - id: chips
+        name: "Potato chips"
         duration: 30
       - id: apple
         name: "Apple"
         duration: 30
-      - id: chewing-gum
-        name: "Chewing Gum"
+      - id: gum
+        name: "Chewing gum"
         duration: 30
       - id: banana
         name: "Banana"
@@ -65,29 +65,29 @@ blocks:
       - id: cheese
         name: "Cheese"
         duration: 30
-      - id: gummy-bears
-        name: "Gummy Bears"
+      - id: gummies
+        name: "Gummy bears"
         duration: 30
   - block_number: 3
-    instruction: "Please chew the indicated food on the indicated side while listening to a sound."
+    instruction: "Please chew the indicated food on the indicated side while listening."
     tasks:
-      - id: salt-pretzels-pop-music
-        name: "Salt Pretzels with pop chart music."
+      - id: pretzels-music
+        name: "Salt pretzels with pop music"
         duration: 30
-      - id: salt-pretzels-dining-ambience
-        name: "Salt Pretzels with dining hall ambience."
+      - id: pretzels-dining
+        name: "Salt pretzels with dining hall ambience"
         duration: 30
-      - id: salt-pretzels-construction-noise
-        name: "Salt Pretzels with construction noise."
+      - id: pretzels-construction
+        name: "Salt pretzels with construction noise"
         duration: 30
-      - id: cheese-pop-music
-        name: "Cheese with pop chart music."
+      - id: cheese-music
+        name: "Cheese with pop music"
         duration: 30
-      - id: cheese-dining-ambience
-        name: "Cheese with dining hall ambience."
+      - id: cheese-dining
+        name: "Cheese with dining hall ambience"
         duration: 30
-      - id: cheese-construction-noise
-        name: "Cheese with construction noise."
+      - id: cheese-construction
+        name: "Cheese with construction noise"
         duration: 30
   - block_number: 4
     instruction: "Please chew the indicated food on the indicated side."

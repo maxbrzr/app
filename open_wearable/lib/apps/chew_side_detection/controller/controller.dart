@@ -34,6 +34,7 @@ class ExperimentController with ChangeNotifier {
   ExperimentState _state = ExperimentState.experimentNotStarted;
   Timer? _progressTimer;
   int _elapsedSeconds = 0;
+  int _syncCounter = 0;
 
   ExperimentController({
     required this.expConfig,
@@ -107,8 +108,8 @@ class ExperimentController with ChangeNotifier {
       throw Exception("When calling startSync, state must be taskWaiting");
     }
 
-    String date = DateFormat('yyMMdd_HH_mm').format(DateTime.now());
-    String id = "${experimentId}_sync_$date";
+    String date = DateFormat('yyMMdd_HH_mm_ss').format(DateTime.now());
+    String id = "${experimentId}_sync_${_syncCounter}_$date";
     await logger.startLogging(id);
     await _startSensors(id);
     _state = ExperimentState.soundSyncing;
@@ -124,6 +125,7 @@ class ExperimentController with ChangeNotifier {
     logger.logTaskEnd();
     await logger.stopAndWriteLogging();
 
+    _syncCounter++;
     _state = ExperimentState.taskWaiting;
     notifyListeners();
   }
@@ -133,7 +135,7 @@ class ExperimentController with ChangeNotifier {
       throw Exception("When calling startTask, state must be taskWaiting");
     }
 
-    String date = DateFormat('yyMMdd_HH_mm').format(DateTime.now());
+    String date = DateFormat('yyMMdd_HH_mm_ss').format(DateTime.now());
     String id =
         "${experimentId}_${currentBlock.number}_${currentTask!.id}_$date";
 

@@ -37,14 +37,14 @@ class ExperimentBlock {
       tasks.add(
         Task(
           id: "$id-left",
-          name: "$name on the left",
+          name: "$name on the left.",
           duration: task["duration"] as int,
         ),
       );
       tasks.add(
         Task(
           id: "$id-right",
-          name: "$name on the right",
+          name: "$name on the right.",
           duration: task["duration"] as int,
         ),
       );
