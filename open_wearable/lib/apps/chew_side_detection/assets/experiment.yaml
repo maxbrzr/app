@@ -69,21 +69,6 @@ blocks:
         name: "Gummy bears"
         duration: 30
   - block_number: 3
-    instruction: "Please chew the indicated food on the indicated side while listening."
-    tasks:
-      - id: pretzels-dining
-        name: "Salt pretzels with dining hall ambience"
-        duration: 30
-      - id: pretzels-construction
-        name: "Salt pretzels with construction noise"
-        duration: 30
-      - id: cheese-dining
-        name: "Cheese with dining hall ambience"
-        duration: 30
-      - id: cheese-construction
-        name: "Cheese with construction noise"
-        duration: 30
-  - block_number: 4
     instruction: "Please chew the indicated food on the indicated side."
     tasks:
       - id: bowl-1
@@ -95,14 +80,26 @@ blocks:
       - id: bowl-3
         name: "Bowl"
         duration: 30
-  - block_number: 5
+  - block_number: 4
     instruction: "Please chew the indicated food on the indicated side while listening."
     tasks:
       - id: pretzels-music
         name: "Salt pretzels with pop music"
         duration: 30
+      - id: pretzels-dining
+        name: "Salt pretzels with dining hall ambience"
+        duration: 30
+      - id: pretzels-construction
+        name: "Salt pretzels with construction noise"
+        duration: 30
       - id: cheese-music
         name: "Cheese with pop music"
         duration: 30
-  - block_number: 6
+      - id: cheese-dining
+        name: "Cheese with dining hall ambience"
+        duration: 30
+      - id: cheese-construction
+        name: "Cheese with construction noise"
+        duration: 30
+  - block_number: 5
     instruction: "Please answer the questionnaire."
